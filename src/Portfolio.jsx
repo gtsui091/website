@@ -136,7 +136,7 @@ function SubItem({ item, color, index, visible }) {
         color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.65)`,
         whiteSpace: "nowrap",
         paddingTop: "1px",
-        width: "110px",
+        width: "90px",
         textAlign: "right",
         flexShrink: 0,
       }}>{item.label}</span>
@@ -163,12 +163,21 @@ export default function Portfolio() {
   const [cursor, setCursor] = useState({ x: -100, y: -100 });
   const [cursorVisible, setCursorVisible] = useState(false);
   const [entered, setEntered] = useState(false);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== "undefined" && window.innerWidth <= 768
+  );
 
   const active = experiences.find((p) => p.id === hovered);
 
   useEffect(() => {
     const t = setTimeout(() => setEntered(true), 80);
     return () => clearTimeout(t);
+  }, []);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
   }, []);
 
   useEffect(() => {
@@ -194,7 +203,7 @@ export default function Portfolio() {
       backgroundColor: bgColor,
       transition: "background-color 0.65s cubic-bezier(0.16, 1, 0.3, 1)",
       fontFamily: "'DM Mono', monospace",
-      cursor: "none",
+      cursor: isMobile ? "default" : "none",
       overflowX: "hidden",
       position: "relative",
     }}>
@@ -313,10 +322,72 @@ export default function Portfolio() {
 
         @keyframes fIn { from { opacity: 0; } to { opacity: 1; } }
         .fin { animation: fIn 1s ease 0.85s both; }
+
+        /* ── Mobile ── */
+        @media (max-width: 768px) {
+          .site-wrap { padding: 0 20px !important; }
+
+          .site-header {
+            flex-direction: column !important;
+            gap: 16px;
+            padding-top: 28px !important;
+            padding-bottom: 48px !important;
+          }
+
+          .site-nav { display: none; }
+
+          .pr { cursor: default; }
+
+          .pr-main {
+            flex-wrap: wrap;
+            align-items: flex-start;
+            gap: 2px;
+            padding: 20px 0;
+          }
+
+          .pnum { padding-top: 6px; }
+
+          .ptitle {
+            flex: 1 1 auto;
+            font-size: clamp(28px, 9vw, 52px) !important;
+          }
+
+          .pr:hover .ptitle { transform: none; }
+
+          .pmeta {
+            width: 100%;
+            min-width: unset !important;
+            align-items: flex-start !important;
+            padding-top: 6px;
+          }
+
+          .ptags { justify-content: flex-start !important; }
+
+          .pdesc {
+            text-align: left !important;
+            max-width: 100% !important;
+          }
+
+          .subitems-wrap { padding-left: 0 !important; }
+
+          .site-footer {
+            flex-direction: column !important;
+            gap: 16px;
+            align-items: flex-start !important;
+            padding-top: 40px !important;
+            padding-bottom: 36px !important;
+          }
+        }
+
+        /* Hide custom cursor on touch devices */
+        @media (pointer: coarse) {
+          .custom-cursor { display: none !important; }
+          * { cursor: default !important; }
+        }
       `}</style>
 
       {/* Custom cursor */}
-      <div style={{
+      <div className="custom-cursor" style={{
         position: "fixed",
         left: cursor.x,
         top: cursor.y,
@@ -352,12 +423,12 @@ export default function Portfolio() {
       }} />
 
       {/* Page content */}
-      <div style={{
+      <div className="site-wrap" style={{
         position: "relative", zIndex: 2,
         maxWidth: "1100px", margin: "0 auto", padding: "0 48px",
       }}>
         {/* Header */}
-        <header className="hin" style={{
+        <header className="site-header hin" style={{
           display: "flex", justifyContent: "space-between", alignItems: "flex-start",
           paddingTop: "48px", paddingBottom: "88px",
         }}>
@@ -373,7 +444,7 @@ export default function Portfolio() {
               fontFamily: "'DM Mono', monospace",
             }}>Software Engineer &amp; Technical Leader</div>
           </div>
-          <nav style={{ display: "flex", gap: "32px", paddingTop: "4px" }}>
+          <nav className="site-nav" style={{ display: "flex", gap: "32px", paddingTop: "4px" }}>
             {["About", "Contact"].map((item) => (
               <span key={item} style={{
                 fontSize: "9px", letterSpacing: "0.13em", textTransform: "uppercase",
@@ -393,8 +464,9 @@ export default function Portfolio() {
               <div
                 key={p.id}
                 className="pr"
-                onMouseEnter={() => setHovered(p.id)}
-                onMouseLeave={() => setHovered(null)}
+                onMouseEnter={!isMobile ? () => setHovered(p.id) : undefined}
+                onMouseLeave={!isMobile ? () => setHovered(null) : undefined}
+                onClick={isMobile ? () => setHovered(hovered === p.id ? null : p.id) : undefined}
               >
                 {/* Main row */}
                 <div className="pr-main">
@@ -435,7 +507,7 @@ export default function Portfolio() {
         </main>
 
         {/* Footer */}
-        <footer className="fin" style={{
+        <footer className="site-footer fin" style={{
           display: "flex", justifyContent: "space-between", alignItems: "center",
           paddingTop: "64px", paddingBottom: "48px",
           borderTop: "1px solid rgba(240,237,230,0.05)", marginTop: "12px",
@@ -450,7 +522,7 @@ export default function Portfolio() {
             {["GitHub", "LinkedIn", "Email"].map((l) => (
               <span key={l} style={{
                 fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase",
-                color: "rgba(240,237,230,0.2)", cursor: "none",
+                color: "rgba(240,237,230,0.2)",
                 fontFamily: "'DM Mono', monospace",
               }}>{l}</span>
             ))}

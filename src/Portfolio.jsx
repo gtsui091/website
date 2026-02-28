@@ -5,7 +5,7 @@ const experiences = [
     id: 1, num: "01", title: "FORM",
     tags: ["Web Team Lead", "Full Stack"], year: "2021–Present",
     desc: "Led the web team through a retention turnaround — churn dropped from 13% to 6% in a single year. Shipped Streaks from hackathon to A/B production, built the Web-Driven UI framework, and migrated infrastructure off AWS OpsWorks with zero downtime.",
-    accent: "#C8FF00", bg: "#0a1a00", visual: "terrain",
+    accent: "#E6FF00", bg: "#0a1a00", visual: "terrain",
     subitems: [
       { label: "Streaks", detail: "Hackathon concept → A/B production in weeks. A direct driver of the churn improvement." },
       { label: "Web-Driven UI", detail: "Eliminated mobile release cycle dependency. Enabled rapid iteration and A/B testing." },

@@ -567,13 +567,12 @@ function TypewriterLine({ text, speed = 16, delay = 0, onDone }) {
   return <>{text.slice(0, chars)}{!done && <span style={{ opacity: 0.55 }}>▮</span>}</>;
 }
 
-// Label types out; once it finishes the detail text slides in instantly.
-// onLabelDone lets the parent know so it can show the trailing prompt.
-function TerminalSubItem({ sub, color, staggerDelay, speed, onLabelDone }) {
+// Label types left→right; the moment it finishes, detail text starts typing
+// left→right in the next column — one continuous motion per row.
+// onDone is called when the DETAIL finishes (full row complete).
+function TerminalSubItem({ sub, color, staggerDelay, labelSpeed, detailSpeed, onDone }) {
   const [labelDone, setLabelDone] = useState(false);
   const rgb = hexRgb(color);
-
-  const handleDone = () => { setLabelDone(true); onLabelDone?.(); };
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: "14px", alignItems: "baseline" }}>
@@ -581,29 +580,26 @@ function TerminalSubItem({ sub, color, staggerDelay, speed, onLabelDone }) {
         fontSize: "8px", letterSpacing: "0.12em", textTransform: "uppercase",
         color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.6)`, textAlign: "right",
       }}>
-        <TypewriterLine text={sub.label} speed={speed} delay={staggerDelay} onDone={handleDone} />
+        <TypewriterLine text={sub.label} speed={labelSpeed} delay={staggerDelay} onDone={() => setLabelDone(true)} />
       </span>
-      <span style={{
-        fontSize: "9.5px", color: "rgba(240,237,230,0.33)", lineHeight: 1.7,
-        opacity: labelDone ? 1 : 0,
-        transform: labelDone ? "none" : "translateX(-10px)",
-        transition: "opacity 0.26s ease, transform 0.3s cubic-bezier(0.16,1,0.3,1)",
-      }}>
-        → {sub.detail}
+      <span style={{ fontSize: "9.5px", color: "rgba(240,237,230,0.33)", lineHeight: 1.7 }}>
+        {/* Only mount once the label column is done — cursor moves left→right into this column */}
+        {labelDone && <TypewriterLine text={`→ ${sub.detail}`} speed={detailSpeed} delay={0} onDone={onDone} />}
       </span>
     </div>
   );
 }
 
-// Full entry row + expandable section. Owns the "all labels done" state so the
-// trailing prompt only appears once every label has finished typing.
+// Full entry row + expandable section. Trailing prompt waits for ALL detail
+// columns to finish typing (not just the labels).
 function TerminalEntry({ p, isOpen, onToggle, isHovered, onHoverEnter, onHoverLeave, blink }) {
   const [allDone, setAllDone] = useState(false);
   const doneCount = useRef(0);
   const trailingTimer = useRef(null);
   const rgb = hexRgb(p.accent);
-  const STAGGER = 220; // ms between subitem label starts
-  const LABEL_SPEED = 16; // ms per character
+  const STAGGER = 220;     // ms between row label starts
+  const LABEL_SPEED = 16;  // ms per char — labels are short so this feels fast
+  const DETAIL_SPEED = 5;  // ms per char — details are longer, keep it snappy
 
   useEffect(() => {
     if (!isOpen) {
@@ -613,10 +609,10 @@ function TerminalEntry({ p, isOpen, onToggle, isHovered, onHoverEnter, onHoverLe
     }
   }, [isOpen]);
 
-  const handleLabelDone = () => {
+  const handleRowDone = () => {
     doneCount.current++;
     if (doneCount.current >= p.subitems.length) {
-      trailingTimer.current = setTimeout(() => setAllDone(true), 160);
+      trailingTimer.current = setTimeout(() => setAllDone(true), 120);
     }
   };
 
@@ -662,15 +658,16 @@ function TerminalEntry({ p, isOpen, onToggle, isHovered, onHoverEnter, onHoverLe
             <TypewriterLine text="──────────────────────────────" speed={8} delay={80} />
           </div>
 
-          {/* Subitems: labels type out staggered, details slide in after each label */}
+          {/* Each row: label types left→right, then detail continues left→right */}
           {p.subitems.map((sub, i) => (
             <TerminalSubItem
               key={sub.label}
               sub={sub}
               color={p.accent}
               staggerDelay={i * STAGGER + 180}
-              speed={LABEL_SPEED}
-              onLabelDone={handleLabelDone}
+              labelSpeed={LABEL_SPEED}
+              detailSpeed={DETAIL_SPEED}
+              onDone={handleRowDone}
             />
           ))}
 

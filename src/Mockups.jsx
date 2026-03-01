@@ -537,6 +537,159 @@ function MockupB() {
   );
 }
 
+// ─── Terminal helpers ─────────────────────────────────────────────────────────
+
+// Types `text` character by character. Shows a solid ▮ cursor while in progress.
+// Calls onDone() once the last character has been printed.
+function TypewriterLine({ text, speed = 16, delay = 0, onDone }) {
+  const [chars, setChars] = useState(0);
+  const refs = useRef({ to: null, iv: null, notified: false });
+
+  useEffect(() => {
+    const r = refs.current;
+    r.notified = false;
+    setChars(0);
+    r.to = setTimeout(() => {
+      let c = 0;
+      r.iv = setInterval(() => {
+        c++;
+        setChars(c);
+        if (c >= text.length) {
+          clearInterval(r.iv);
+          if (!r.notified) { r.notified = true; onDone?.(); }
+        }
+      }, speed);
+    }, delay);
+    return () => { clearTimeout(r.to); clearInterval(r.iv); };
+  }, [text, speed, delay]);
+
+  const done = chars >= text.length;
+  return <>{text.slice(0, chars)}{!done && <span style={{ opacity: 0.55 }}>▮</span>}</>;
+}
+
+// Label types out; once it finishes the detail text slides in instantly.
+// onLabelDone lets the parent know so it can show the trailing prompt.
+function TerminalSubItem({ sub, color, staggerDelay, speed, onLabelDone }) {
+  const [labelDone, setLabelDone] = useState(false);
+  const rgb = hexRgb(color);
+
+  const handleDone = () => { setLabelDone(true); onLabelDone?.(); };
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: "14px", alignItems: "baseline" }}>
+      <span style={{
+        fontSize: "8px", letterSpacing: "0.12em", textTransform: "uppercase",
+        color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.6)`, textAlign: "right",
+      }}>
+        <TypewriterLine text={sub.label} speed={speed} delay={staggerDelay} onDone={handleDone} />
+      </span>
+      <span style={{
+        fontSize: "9.5px", color: "rgba(240,237,230,0.33)", lineHeight: 1.7,
+        opacity: labelDone ? 1 : 0,
+        transform: labelDone ? "none" : "translateX(-10px)",
+        transition: "opacity 0.26s ease, transform 0.3s cubic-bezier(0.16,1,0.3,1)",
+      }}>
+        → {sub.detail}
+      </span>
+    </div>
+  );
+}
+
+// Full entry row + expandable section. Owns the "all labels done" state so the
+// trailing prompt only appears once every label has finished typing.
+function TerminalEntry({ p, isOpen, onToggle, isHovered, onHoverEnter, onHoverLeave, blink }) {
+  const [allDone, setAllDone] = useState(false);
+  const doneCount = useRef(0);
+  const trailingTimer = useRef(null);
+  const rgb = hexRgb(p.accent);
+  const STAGGER = 220; // ms between subitem label starts
+  const LABEL_SPEED = 16; // ms per character
+
+  useEffect(() => {
+    if (!isOpen) {
+      clearTimeout(trailingTimer.current);
+      setAllDone(false);
+      doneCount.current = 0;
+    }
+  }, [isOpen]);
+
+  const handleLabelDone = () => {
+    doneCount.current++;
+    if (doneCount.current >= p.subitems.length) {
+      trailingTimer.current = setTimeout(() => setAllDone(true), 160);
+    }
+  };
+
+  return (
+    <div
+      className="mc-entry"
+      onMouseEnter={onHoverEnter}
+      onMouseLeave={onHoverLeave}
+      onClick={onToggle}
+    >
+      {/* ── Main row ── */}
+      <div className="mc-row">
+        <span style={{ fontSize: "11px", color: isHovered || isOpen ? p.accent : "rgba(240,237,230,0.1)", transition: "color 0.22s", flexShrink: 0, width: "14px", lineHeight: 1 }}>
+          {isHovered || isOpen ? "▶" : "·"}
+        </span>
+        <span style={{ fontSize: "9px", color: isHovered ? p.accent : "rgba(240,237,230,0.17)", letterSpacing: "0.06em", flexShrink: 0, transition: "color 0.22s", lineHeight: 1 }}>{p.num}</span>
+        <div className="mc-title" style={{ flex: 1, color: isHovered ? p.accent : "rgba(240,237,230,0.82)" }}>
+          {p.title}
+          {(isHovered || isOpen) && (
+            <span style={{ opacity: blink ? 1 : 0, fontSize: "0.55em", verticalAlign: "middle", marginLeft: "5px", transition: "opacity 0.05s" }}>▮</span>
+          )}
+        </div>
+        <div style={{ textAlign: "right", flexShrink: 0 }}>
+          <div style={{ fontSize: "9px", color: "rgba(240,237,230,0.13)", letterSpacing: "0.08em", marginBottom: "5px" }}>{p.year}</div>
+          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", flexWrap: "wrap" }}>
+            {p.tags.map((tag) => (
+              <span key={tag} style={{ fontSize: "8px", letterSpacing: "0.12em", textTransform: "uppercase", color: `rgba(${rgb.r},${rgb.g},${rgb.b},${isHovered ? 0.58 : 0.18})`, transition: "color 0.22s" }}>{tag}</span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Expanded section ── */}
+      {isOpen && (
+        <div className="mc-sub">
+          {/* Desc fades in immediately — too long to type comfortably */}
+          <div style={{ fontSize: "9.5px", color: "rgba(240,237,230,0.36)", lineHeight: 1.8, maxWidth: "580px", animation: "mcIn 0.3s cubic-bezier(0.16,1,0.3,1) both" }}>
+            {p.desc}
+          </div>
+
+          {/* Divider types out — gives the "terminal printing" feeling before subitems */}
+          <div style={{ fontSize: "9px", color: "rgba(240,237,230,0.08)", animation: "mcIn 0.2s ease 0.06s both" }}>
+            <TypewriterLine text="──────────────────────────────" speed={8} delay={80} />
+          </div>
+
+          {/* Subitems: labels type out staggered, details slide in after each label */}
+          {p.subitems.map((sub, i) => (
+            <TerminalSubItem
+              key={sub.label}
+              sub={sub}
+              color={p.accent}
+              staggerDelay={i * STAGGER + 180}
+              speed={LABEL_SPEED}
+              onLabelDone={handleLabelDone}
+            />
+          ))}
+
+          {/* Trailing prompt — appears only once all labels have finished */}
+          <div style={{
+            fontSize: "9px", color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.38)`,
+            marginTop: "4px",
+            opacity: allDone ? 1 : 0,
+            transform: allDone ? "none" : "translateX(-6px)",
+            transition: "opacity 0.22s ease, transform 0.28s ease",
+          }}>
+            $<span style={{ opacity: blink ? 1 : 0, transition: "opacity 0.05s", marginLeft: "4px" }}>▮</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── MOCKUP C: Terminal ───────────────────────────────────────────────────────
 //
 // Command-line aesthetic — everything monospaced, entries formatted like terminal
@@ -642,75 +795,18 @@ function MockupC() {
 
         {/* Entries */}
         <div>
-          {experiences.map((p) => {
-            const rgb = hexRgb(p.accent);
-            const isHov = hovered === p.id;
-            const isOpen = expanded === p.id;
-
-            return (
-              <div
-                key={p.id}
-                className="mc-entry"
-                onMouseEnter={() => setHovered(p.id)}
-                onMouseLeave={() => setHovered(null)}
-                onClick={() => setExpanded(expanded === p.id ? null : p.id)}
-              >
-                <div className="mc-row">
-                  {/* Prompt marker */}
-                  <span style={{ fontSize: "11px", color: isHov || isOpen ? p.accent : "rgba(240,237,230,0.1)", transition: "color 0.22s", flexShrink: 0, width: "14px", lineHeight: 1 }}>
-                    {isHov || isOpen ? "▶" : "·"}
-                  </span>
-
-                  {/* Number */}
-                  <span style={{ fontSize: "9px", color: isHov ? p.accent : "rgba(240,237,230,0.17)", letterSpacing: "0.06em", flexShrink: 0, transition: "color 0.22s", lineHeight: 1 }}>{p.num}</span>
-
-                  {/* Title + optional blink */}
-                  <div className="mc-title" style={{ flex: 1, color: isHov ? p.accent : "rgba(240,237,230,0.82)" }}>
-                    {p.title}
-                    {(isHov || isOpen) && (
-                      <span style={{ opacity: blink ? 1 : 0, fontSize: "0.55em", verticalAlign: "middle", marginLeft: "5px", transition: "opacity 0.05s" }}>▮</span>
-                    )}
-                  </div>
-
-                  {/* Year + tags */}
-                  <div style={{ textAlign: "right", flexShrink: 0 }}>
-                    <div style={{ fontSize: "9px", color: "rgba(240,237,230,0.13)", letterSpacing: "0.08em", marginBottom: "5px" }}>{p.year}</div>
-                    <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", flexWrap: "wrap" }}>
-                      {p.tags.map((tag) => (
-                        <span key={tag} style={{ fontSize: "8px", letterSpacing: "0.12em", textTransform: "uppercase", color: `rgba(${rgb.r},${rgb.g},${rgb.b},${isHov ? 0.58 : 0.18})`, transition: "color 0.22s" }}>{tag}</span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Expanded output */}
-                {isOpen && (
-                  <div className="mc-sub">
-                    {/* Short desc */}
-                    <div style={{ fontSize: "9.5px", color: "rgba(240,237,230,0.36)", lineHeight: 1.8, maxWidth: "580px", animation: "mcIn 0.35s cubic-bezier(0.16,1,0.3,1) both" }}>
-                      {p.desc}
-                    </div>
-
-                    {/* Divider */}
-                    <div style={{ fontSize: "9px", color: "rgba(240,237,230,0.08)", letterSpacing: "0.08em", animation: "mcIn 0.35s cubic-bezier(0.16,1,0.3,1) 0.04s both" }}>──────────────────────────────</div>
-
-                    {/* Subitems */}
-                    {p.subitems.map((sub, i) => (
-                      <div key={sub.label} style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: "14px", alignItems: "baseline", animation: `mcIn 0.4s cubic-bezier(0.16,1,0.3,1) ${0.06 + i * 0.06}s both` }}>
-                        <span style={{ fontSize: "8px", letterSpacing: "0.12em", textTransform: "uppercase", color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.6)`, textAlign: "right" }}>{sub.label}</span>
-                        <span style={{ fontSize: "9.5px", color: "rgba(240,237,230,0.33)", lineHeight: 1.7 }}>→ {sub.detail}</span>
-                      </div>
-                    ))}
-
-                    {/* Trailing prompt */}
-                    <div style={{ fontSize: "9px", color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.38)`, animation: `mcIn 0.4s cubic-bezier(0.16,1,0.3,1) ${0.06 + p.subitems.length * 0.06}s both` }}>
-                      $<span style={{ opacity: blink ? 1 : 0, transition: "opacity 0.05s", marginLeft: "4px" }}>▮</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
+          {experiences.map((p) => (
+            <TerminalEntry
+              key={p.id}
+              p={p}
+              isOpen={expanded === p.id}
+              onToggle={() => setExpanded(expanded === p.id ? null : p.id)}
+              isHovered={hovered === p.id}
+              onHoverEnter={() => setHovered(p.id)}
+              onHoverLeave={() => setHovered(null)}
+              blink={blink}
+            />
+          ))}
         </div>
 
         {/* Footer */}

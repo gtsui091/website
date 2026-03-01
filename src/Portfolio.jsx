@@ -6,6 +6,14 @@ const experiences = [
     tags: ["Web Team Lead", "Full Stack"], year: "2021–Present",
     desc: "Led the web team through a retention turnaround — churn dropped from 13% to 6% in a single year. Shipped Streaks from hackathon to A/B production, built the Web-Driven UI framework, and migrated infrastructure off AWS OpsWorks with zero downtime.",
     accent: "#E6FF00", bg: "#0a1a00", visual: "terrain",
+    logo: (
+      <svg viewBox="0 0 96 38" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="FORM">
+        <rect x="1.25" y="1.25" width="40" height="35.5" rx="12" stroke="currentColor" strokeWidth="2.5"/>
+        <rect x="54.75" y="1.25" width="40" height="35.5" rx="12" stroke="currentColor" strokeWidth="2.5"/>
+        <line x1="41.25" y1="19" x2="54.75" y2="19" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+        <circle cx="21.25" cy="19" r="8" stroke="currentColor" strokeWidth="1.5"/>
+      </svg>
+    ),
     subitems: [
       { label: "Streaks", detail: "Hackathon concept → A/B production in weeks. A direct driver of the churn improvement." },
       { label: "Web-Driven UI", detail: "Eliminated mobile release cycle dependency. Enabled rapid iteration and A/B testing." },
@@ -18,6 +26,14 @@ const experiences = [
     tags: ["Full Stack Dev", "PostgreSQL", "AWS"], year: "2015–2020",
     desc: "Stepped in as Full Stack Developer when the previous dev left mid-transition. Rebuilt the data pipeline, introduced PostGIS spatial dimensions, deployed via AWS and Jenkins, and led a 3-week training in the Philippines. Co-authored 6 peer-reviewed journal articles.",
     accent: "#00C2FF", bg: "#000d1a", visual: "dots",
+    logo: (
+      <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Sea Around Us">
+        {/* Three puzzle segments — fish (UBC gold), mammals + plants (marine blue) */}
+        <path d="M24 24 L24.94 6.02 A18 18 0 0 1 40.04 32.17 Z" fill="#C4952A"/>
+        <path d="M24 24 L39.10 33.81 A18 18 0 0 1 8.90 33.81 Z" fill="#3AAFC8"/>
+        <path d="M24 24 L7.96 32.17 A18 18 0 0 1 23.06 6.02 Z" fill="#3AAFC8"/>
+      </svg>
+    ),
     subitems: [
       { label: "Spatial Data", detail: "Integrated PostGIS into PostgreSQL — new geographic dimensions across the global fisheries dataset." },
       { label: "Pipeline", detail: "Rebuilt the production data pipeline and processing code during a full tech stack transition." },
@@ -30,6 +46,19 @@ const experiences = [
     tags: ["Co-Founder", "CPG", "Sustainability"], year: "2017–2019",
     desc: "Co-founded a line of instant Asian camping meals in 100% compostable packaging — addressing a real gap in outdoor food and tackling plastic waste. Scaled from Vancouver to Ottawa. Featured in Edible Ottawa, March 2019.",
     accent: "#FF8C42", bg: "#1a0800", visual: "fluid",
+    logo: (
+      <svg viewBox="0 0 80 62" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Backcountry Wok">
+        {/* Mountain peaks above the rim */}
+        <path d="M14 36 L24 18 L34 28 L42 10 L52 26 L60 16 L66 36" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+        {/* Wok rim */}
+        <line x1="10" y1="36" x2="70" y2="36" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+        {/* Wok bowl */}
+        <path d="M10 36 Q40 64 70 36" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" fill="none"/>
+        {/* Handles */}
+        <line x1="10" y1="36" x2="2" y2="31" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+        <line x1="70" y1="36" x2="78" y2="31" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+      </svg>
+    ),
     subitems: [
       { label: "Product", detail: "Instant, dried Asian meals in heat-resistant, 100% compostable bags." },
       { label: "Mission", detail: "Tackled the lack of Asian outdoor foods and plastic waste in consumer-packaged goods." },
@@ -294,6 +323,15 @@ export default function Portfolio() {
         }
         .pdesc.vis { color: rgba(240,237,230,0.5); }
 
+        .logo-wrap {
+          padding-bottom: 20px;
+        }
+        .logo-wrap svg {
+          height: 32px;
+          width: auto;
+          opacity: 0.85;
+        }
+
         .subitems-wrap {
           max-height: 0;
           overflow: hidden;
@@ -510,20 +548,27 @@ export default function Portfolio() {
                   </div>
                 </div>
 
-                {/* Expandable sub-items */}
-                {p.subitems && (
+                {/* Expandable sub-items + logo */}
+                {(p.subitems || p.logo) && (
                   <div className={`subitems-wrap${isHov ? " open" : ""}`}>
-                    <div className="subitems-inner">
-                      {p.subitems.map((sub, i) => (
-                        <SubItem
-                          key={sub.label}
-                          item={sub}
-                          color={p.accent}
-                          index={i}
-                          visible={isHov}
-                        />
-                      ))}
-                    </div>
+                    {p.logo && (
+                      <div className="logo-wrap" style={{ color: p.accent }}>
+                        {p.logo}
+                      </div>
+                    )}
+                    {p.subitems && (
+                      <div className="subitems-inner">
+                        {p.subitems.map((sub, i) => (
+                          <SubItem
+                            key={sub.label}
+                            item={sub}
+                            color={p.accent}
+                            index={i}
+                            visible={isHov}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

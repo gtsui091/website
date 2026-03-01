@@ -210,30 +210,32 @@ const SCRAMBLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#%^&*";
 
 function ScrambleTitle({ text, active, className, style }) {
   const [display, setDisplay] = useState(text);
-  const frameRef = useRef(null);
+  const timerRef = useRef(null);
 
   useEffect(() => {
-    cancelAnimationFrame(frameRef.current);
+    clearInterval(timerRef.current);
     if (!active) {
       setDisplay(text);
       return;
     }
-    let start = null;
-    const duration = 420;
-    const tick = (ts) => {
-      if (!start) start = ts;
-      const progress = Math.min((ts - start) / duration, 1);
+    const start = Date.now();
+    const duration = 550;
+    timerRef.current = setInterval(() => {
+      const progress = Math.min((Date.now() - start) / duration, 1);
       const resolved = Math.floor(progress * text.length);
+      if (progress >= 1) {
+        setDisplay(text);
+        clearInterval(timerRef.current);
+        return;
+      }
       setDisplay(
         text.split("").map((ch, i) => {
           if (i < resolved || ch === " " || ch === "-") return ch;
           return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
         }).join("")
       );
-      if (progress < 1) frameRef.current = requestAnimationFrame(tick);
-    };
-    frameRef.current = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frameRef.current);
+    }, 30);
+    return () => clearInterval(timerRef.current);
   }, [active, text]);
 
   return <span className={className} style={style}>{display}</span>;

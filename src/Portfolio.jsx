@@ -159,6 +159,7 @@ function SubItem({ item, color, index, visible }) {
 }
 
 export default function Portfolio() {
+  const [expanded, setExpanded] = useState(null);
   const [hovered, setHovered] = useState(null);
   const [cursor, setCursor] = useState({ x: -100, y: -100 });
   const [cursorVisible, setCursorVisible] = useState(false);
@@ -167,7 +168,8 @@ export default function Portfolio() {
     typeof window !== "undefined" && window.innerWidth <= 768
   );
 
-  const active = experiences.find((p) => p.id === hovered);
+  const active = experiences.find((p) => p.id === expanded);
+  const activeHovered = experiences.find((p) => p.id === hovered);
 
   useEffect(() => {
     const t = setTimeout(() => setEntered(true), 80);
@@ -195,7 +197,7 @@ export default function Portfolio() {
   }, []);
 
   const bgColor = active ? active.bg : "#0c0c0c";
-  const accentColor = active ? active.accent : "#f0ede6";
+  const accentColor = (activeHovered ?? active)?.accent ?? "#f0ede6";
 
   return (
     <div style={{
@@ -330,7 +332,18 @@ export default function Portfolio() {
         @keyframes fIn { from { opacity: 0; } to { opacity: 1; } }
         .fin { animation: fIn 1s ease 0.85s both; }
 
-        .pchevron { display: none; }
+        .pchevron {
+          display: flex;
+          align-items: center;
+          font-size: 14px;
+          color: rgba(240,237,230,0.18);
+          transition: transform 0.4s cubic-bezier(0.16,1,0.3,1), color 0.3s ease;
+          flex-shrink: 0;
+          align-self: center;
+          padding: 0 2px;
+          font-style: normal;
+        }
+        .pchevron.open { transform: rotate(90deg); }
 
         /* ── Mobile ── */
         @media (max-width: 768px) {
@@ -346,7 +359,7 @@ export default function Portfolio() {
           .site-nav { display: none; }
 
           .pr {
-            cursor: default;
+            cursor: pointer;
             touch-action: manipulation;
           }
 
@@ -360,19 +373,6 @@ export default function Portfolio() {
           .ptitle { font-size: clamp(28px, 9vw, 52px) !important; }
 
           .pr:hover .ptitle { transform: none; }
-
-          .pchevron {
-            display: flex;
-            align-items: center;
-            font-size: 14px;
-            color: rgba(240,237,230,0.18);
-            transition: transform 0.4s cubic-bezier(0.16,1,0.3,1), color 0.3s ease;
-            flex-shrink: 0;
-            align-self: center;
-            padding: 0 2px;
-            font-style: normal;
-          }
-          .pchevron.open { transform: rotate(90deg); }
 
           .pmeta {
             width: 100%;
@@ -417,7 +417,7 @@ export default function Portfolio() {
         opacity: cursorVisible ? 1 : 0,
       }}>
         <svg width="18" height="18" viewBox="0 0 18 18">
-          <circle cx="9" cy="9" r="3.5" fill={hovered ? accentColor : "#f0ede6"} />
+          <circle cx="9" cy="9" r="3.5" fill={accentColor} />
         </svg>
       </div>
 
@@ -425,12 +425,17 @@ export default function Portfolio() {
       <div style={{
         position: "fixed",
         inset: 0,
-        opacity: hovered ? 0.22 : 0,
+        opacity: expanded ? 0.22 : (hovered ? 0.08 : 0),
         transition: "opacity 0.7s ease",
         pointerEvents: "none",
         zIndex: 0,
       }}>
-        {active && <ProjectVisual visual={active.visual} color={active.accent} />}
+        {(active || activeHovered) && (
+          <ProjectVisual
+            visual={(active ?? activeHovered).visual}
+            color={(active ?? activeHovered).accent}
+          />
+        )}
       </div>
 
       {/* Grain overlay */}
@@ -476,7 +481,7 @@ export default function Portfolio() {
         {/* Experience list */}
         <main className={entered ? "entered" : ""}>
           {experiences.map((p) => {
-            const isHov = hovered === p.id;
+            const isOpen = expanded === p.id;
             const rgb = hexRgb(p.accent);
             return (
               <div
@@ -484,35 +489,35 @@ export default function Portfolio() {
                 className="pr"
                 onMouseEnter={!isMobile ? () => setHovered(p.id) : undefined}
                 onMouseLeave={!isMobile ? () => setHovered(null) : undefined}
-                onClick={isMobile ? () => setHovered(hovered === p.id ? null : p.id) : undefined}
+                onClick={() => setExpanded(expanded === p.id ? null : p.id)}
               >
                 {/* Main row */}
                 <div className="pr-main">
-                  <span className="pnum" style={{ color: isHov ? p.accent : undefined }}>{p.num}</span>
+                  <span className="pnum" style={{ color: isOpen ? p.accent : undefined }}>{p.num}</span>
                   <div className="ptitle-group">
-                    <span className="ptitle" style={{ color: isHov ? p.accent : undefined }}>{p.title}</span>
+                    <span className="ptitle" style={{ color: isOpen ? p.accent : undefined }}>{p.title}</span>
                     <div className="ptags">
                       {p.tags.map((tag) => (
                         <span key={tag} className="ptag" style={{
-                          color: isHov ? `rgba(${rgb.r},${rgb.g},${rgb.b},0.65)` : undefined,
+                          color: isOpen ? `rgba(${rgb.r},${rgb.g},${rgb.b},0.65)` : undefined,
                         }}>{tag}</span>
                       ))}
                     </div>
                   </div>
                   <span
-                    className={`pchevron${isHov ? " open" : ""}`}
-                    style={{ color: isHov ? `rgba(${rgb.r},${rgb.g},${rgb.b},0.5)` : undefined }}
+                    className={`pchevron${isOpen ? " open" : ""}`}
+                    style={{ color: isOpen ? `rgba(${rgb.r},${rgb.g},${rgb.b},0.5)` : undefined }}
                     aria-hidden="true"
                   >›</span>
                   <div className="pmeta">
                     <span className="pyear">{p.year}</span>
-                    <p className={`pdesc${isHov ? " vis" : ""}`}>{p.desc}</p>
+                    <p className={`pdesc${isOpen ? " vis" : ""}`}>{p.desc}</p>
                   </div>
                 </div>
 
                 {/* Expandable sub-items */}
                 {p.subitems && (
-                  <div className={`subitems-wrap${isHov ? " open" : ""}`}>
+                  <div className={`subitems-wrap${isOpen ? " open" : ""}`}>
                     <div className="subitems-inner">
                       {p.subitems.map((sub, i) => (
                         <SubItem
@@ -520,7 +525,7 @@ export default function Portfolio() {
                           item={sub}
                           color={p.accent}
                           index={i}
-                          visible={isHov}
+                          visible={isOpen}
                         />
                       ))}
                     </div>

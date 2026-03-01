@@ -6,6 +6,13 @@ const experiences = [
     tags: ["Web Team Lead", "Full Stack"], year: "2021–Present",
     desc: "Led the web team through a retention turnaround — churn dropped from 13% to 6% in a single year. Shipped Streaks from hackathon to A/B production, built the Web-Driven UI framework, and migrated infrastructure off AWS OpsWorks with zero downtime.",
     accent: "#E6FF00", bg: "#0a1a00", visual: "terrain",
+    siteUrl: "https://www.formswim.com",
+    workNote: "Churn cut in half. Streaks shipped in 4 weeks. Zero downtime on the migration.",
+    images: [
+      { src: "https://www.formswim.com/cdn/shop/files/SS2_PDPHero_Desktop.jpg", caption: "FORM Smart Swim 2 — real-time metrics in the goggle display" },
+      { src: "https://www.formswim.com/cdn/shop/files/SS2_Lifestyle_Pool.jpg", caption: "In-pool session with Streaks active" },
+      { src: "https://www.formswim.com/cdn/shop/files/WebDrivenUI_Dashboard.jpg", caption: "Web-Driven UI — shipped without a mobile app release" },
+    ],
     subitems: [
       { label: "Streaks", detail: "Hackathon concept → A/B production in weeks. A direct driver of the churn improvement." },
       { label: "Web-Driven UI", detail: "Eliminated mobile release cycle dependency. Enabled rapid iteration and A/B testing." },
@@ -27,6 +34,13 @@ const experiences = [
     tags: ["Full Stack Dev", "PostgreSQL", "AWS"], year: "2015–2020",
     desc: "Stepped in as Full Stack Developer when the previous dev left mid-transition. Rebuilt the data pipeline, introduced PostGIS spatial dimensions, deployed via AWS and Jenkins, and led a 3-week training in the Philippines. Co-authored 6 peer-reviewed journal articles.",
     accent: "#00C2FF", bg: "#000d1a", visual: "dots",
+    siteUrl: "https://www.seaaroundus.org",
+    workNote: "Spatial data at the scale of the world's oceans. 6 papers. One pipeline rebuilt mid-flight.",
+    images: [
+      { src: "https://www.seaaroundus.org/wp-content/uploads/2019/01/sau-social-2.jpg", caption: "Global catch allocation — 180,000 half-degree ocean cells" },
+      { src: "https://www.seaaroundus.org/wp-content/uploads/2015/12/sea-around-us-map.jpg", caption: "PostGIS spatial layer — new geographic dimensions" },
+      { src: "https://images.unsplash.com/photo-1518020382113-a7e8fc38eac9?w=1600", caption: "Manila workshop — 3 weeks of hands-on data pipeline training" },
+    ],
     subitems: [
       { label: "Spatial Data", detail: "Integrated PostGIS into PostgreSQL — new geographic dimensions across the global fisheries dataset." },
       { label: "Pipeline", detail: "Rebuilt the production data pipeline and processing code during a full tech stack transition." },
@@ -48,6 +62,13 @@ const experiences = [
     tags: ["Co-Founder", "CPG", "Sustainability"], year: "2017–2019",
     desc: "Co-founded a line of instant Asian camping meals in 100% compostable packaging — addressing a real gap in outdoor food and tackling plastic waste. Scaled from Vancouver to Ottawa. Featured in Edible Ottawa, March 2019.",
     accent: "#FF8C42", bg: "#1a0800", visual: "fluid",
+    siteUrl: null,
+    workNote: "Instant. Compostable. Unapologetically Asian. Built for the gap nobody else was filling.",
+    images: [
+      { src: "https://images.unsplash.com/photo-1563245372-f21724e3856d?w=1600", caption: "Compostable packaging — no plastic, no compromise" },
+      { src: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?w=1600", caption: "Instant dried Asian camping meals" },
+      { src: "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1600", caption: "Vancouver and Ottawa — outdoor market distribution" },
+    ],
     subitems: [
       { label: "Product", detail: "Instant, dried Asian meals in heat-resistant, 100% compostable bags." },
       { label: "Mission", detail: "Tackled the lack of Asian outdoor foods and plastic waste in consumer-packaged goods." },
@@ -275,6 +296,138 @@ function DetailView({ entry, onClose, closing }) {
   );
 }
 
+function WorkModal({ entry, onClose, closing }) {
+  const rgb = hexRgb(entry.accent);
+
+  return (
+    <div
+      className={`wm-overlay${closing ? " wm-closing" : ""}`}
+      onClick={onClose}
+      aria-modal="true"
+      role="dialog"
+    >
+      <div className="wm-backdrop" />
+      <div
+        className="wm-panel"
+        style={{ backgroundColor: entry.bg }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Close */}
+        <button
+          className="wm-close"
+          onClick={onClose}
+          aria-label="Close work view"
+          style={{ color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.4)` }}
+        >×</button>
+
+        {/* Eyebrow */}
+        <div className="wm-eyebrow">
+          <span className="wm-eyebrow-num" style={{ color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.2)` }}>
+            {entry.num}
+          </span>
+          <span className="wm-eyebrow-title">{entry.title}</span>
+          <span className="wm-eyebrow-year">{entry.year}</span>
+        </div>
+
+        {/* Two-column body */}
+        <div className="wm-body">
+
+          {/* LEFT: image stack */}
+          <div className="wm-images">
+            {entry.images.map((img, i) => (
+              <div
+                key={i}
+                className="wm-img-wrap"
+                style={{ animationDelay: `${0.15 + i * 0.12}s` }}
+              >
+                <img
+                  src={img.src}
+                  alt={img.caption}
+                  className="wm-img"
+                  loading="lazy"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                    if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = "flex";
+                  }}
+                />
+                <div
+                  className="wm-img-fallback"
+                  style={{ background: `rgba(${rgb.r},${rgb.g},${rgb.b},0.06)`, border: `1px solid rgba(${rgb.r},${rgb.g},${rgb.b},0.12)` }}
+                >
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", letterSpacing: "0.12em", color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.3)` }}>
+                    image unavailable
+                  </span>
+                </div>
+                {img.caption && (
+                  <div className="wm-img-caption">
+                    <span style={{ color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.55)` }}>{img.caption}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* RIGHT: editorial text */}
+          <div className="wm-text">
+            <div
+              className="wm-ghost-num"
+              style={{ color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.04)` }}
+            >{entry.num}</div>
+
+            <h2 className="wm-headline" style={{ color: entry.accent }}>{entry.title}</h2>
+
+            <div className="wm-tags">
+              {entry.tags.map((tag) => (
+                <span key={tag} className="wm-tag" style={{ color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.45)` }}>
+                  {tag}
+                </span>
+              ))}
+            </div>
+
+            <blockquote
+              className="wm-pullquote"
+              style={{ borderLeftColor: `rgba(${rgb.r},${rgb.g},${rgb.b},0.4)` }}
+            >
+              {entry.story.headline}
+            </blockquote>
+
+            {entry.workNote && (
+              <p className="wm-worknote">{entry.workNote}</p>
+            )}
+
+            <div className="wm-rule" style={{ background: `rgba(${rgb.r},${rgb.g},${rgb.b},0.12)` }} />
+
+            {entry.story.stats && (
+              <div className="wm-stats">
+                {entry.story.stats.map((stat) => (
+                  <div key={stat.label} className="wm-stat">
+                    <span className="wm-stat-value" style={{ color: entry.accent }}>{stat.value}</span>
+                    <span className="wm-stat-label">{stat.label}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <p className="wm-body-text">{entry.story.body}</p>
+
+            {entry.siteUrl && (
+              <a
+                className="wm-link"
+                href={entry.siteUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.6)` }}
+              >
+                visit site ↗
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Portfolio() {
   const [expanded, setExpanded] = useState(null);
   const [hovered, setHovered] = useState(null);
@@ -287,6 +440,9 @@ export default function Portfolio() {
   const [detailed, setDetailed] = useState(null);
   const [detailClosing, setDetailClosing] = useState(false);
   const detailCloseTimer = useRef(null);
+  const [workModal, setWorkModal] = useState(null);
+  const [workModalClosing, setWorkModalClosing] = useState(false);
+  const workModalCloseTimer = useRef(null);
 
   const active = experiences.find((p) => p.id === expanded);
   const activeHovered = experiences.find((p) => p.id === hovered);
@@ -298,6 +454,15 @@ export default function Portfolio() {
       setDetailed(null);
       setDetailClosing(false);
     }, 350);
+  };
+
+  const handleWorkModalClose = () => {
+    if (workModalCloseTimer.current) clearTimeout(workModalCloseTimer.current);
+    setWorkModalClosing(true);
+    workModalCloseTimer.current = setTimeout(() => {
+      setWorkModal(null);
+      setWorkModalClosing(false);
+    }, 400);
   };
 
   useEffect(() => {
@@ -325,18 +490,23 @@ export default function Portfolio() {
     };
   }, []);
 
-  // Esc key dismisses detail overlay
+  // Esc key dismisses overlays
   useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape" && detailed) handleDetailClose(); };
+    const onKey = (e) => {
+      if (e.key === "Escape") {
+        if (workModal) handleWorkModalClose();
+        else if (detailed) handleDetailClose();
+      }
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [detailed]);
+  }, [detailed, workModal]);
 
-  // Scroll lock while detail overlay is open
+  // Scroll lock while any overlay is open
   useEffect(() => {
-    document.body.style.overflow = detailed ? "hidden" : "";
+    document.body.style.overflow = (detailed || workModal) ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
-  }, [detailed]);
+  }, [detailed, workModal]);
 
   const bgColor = active ? active.bg : "#0c0c0c";
   const accentColor = (activeHovered ?? active)?.accent ?? "#f0ede6";
@@ -695,6 +865,279 @@ export default function Portfolio() {
           animation: detailUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.58s both;
         }
 
+        /* ── Work Modal ── */
+        @keyframes wmSlideIn {
+          from { opacity: 0; transform: translateX(60px); }
+          to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes wmSlideOut {
+          from { opacity: 1; transform: translateX(0); }
+          to   { opacity: 0; transform: translateX(60px); }
+        }
+        @keyframes wmImgIn {
+          from { opacity: 0; transform: translateY(24px) scale(0.97); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes wmTextIn {
+          from { opacity: 0; transform: translateY(18px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .wm-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 200;
+          display: flex;
+          justify-content: flex-end;
+        }
+        .wm-backdrop {
+          position: absolute;
+          inset: 0;
+          background: rgba(6,6,6,0.72);
+          backdrop-filter: blur(6px);
+          -webkit-backdrop-filter: blur(6px);
+          animation: detailIn 0.3s ease both;
+        }
+        .wm-closing .wm-backdrop {
+          animation: detailOut 0.4s ease both;
+        }
+        .wm-panel {
+          position: relative;
+          width: 78%;
+          max-width: 1080px;
+          height: 100%;
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
+          animation: wmSlideIn 0.55s cubic-bezier(0.16,1,0.3,1) both;
+          box-shadow: -32px 0 80px rgba(0,0,0,0.6);
+        }
+        .wm-closing .wm-panel {
+          animation: wmSlideOut 0.4s cubic-bezier(0.16,1,0.3,1) both;
+        }
+        .wm-close {
+          position: absolute;
+          top: 32px;
+          right: 36px;
+          z-index: 10;
+          font-family: 'DM Mono', monospace;
+          font-size: 22px;
+          background: none;
+          border: none;
+          cursor: none;
+          padding: 8px;
+          line-height: 1;
+          transition: color 0.2s ease;
+        }
+        .wm-close:hover { color: rgba(240,237,230,0.9) !important; }
+        .wm-eyebrow {
+          flex-shrink: 0;
+          display: flex;
+          align-items: baseline;
+          gap: 16px;
+          padding: 36px 48px 0;
+          animation: wmTextIn 0.6s cubic-bezier(0.16,1,0.3,1) 0.1s both;
+        }
+        .wm-eyebrow-num {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 11px;
+          font-style: italic;
+          letter-spacing: 0.08em;
+        }
+        .wm-eyebrow-title {
+          font-family: 'DM Mono', monospace;
+          font-size: 9px;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          color: rgba(240,237,230,0.18);
+        }
+        .wm-eyebrow-year {
+          font-family: 'DM Mono', monospace;
+          font-size: 9px;
+          letter-spacing: 0.1em;
+          color: rgba(240,237,230,0.12);
+          margin-left: auto;
+          margin-right: 64px;
+        }
+        .wm-body {
+          flex: 1;
+          display: flex;
+          min-height: 0;
+          margin-top: 28px;
+          overflow: hidden;
+        }
+        /* LEFT: image column */
+        .wm-images {
+          width: 45%;
+          flex-shrink: 0;
+          overflow-y: auto;
+          overflow-x: hidden;
+          padding: 0 0 60px 48px;
+          display: flex;
+          flex-direction: column;
+          scrollbar-width: none;
+        }
+        .wm-images::-webkit-scrollbar { display: none; }
+        .wm-img-wrap {
+          position: relative;
+          width: 100%;
+          margin-bottom: -28px;
+          animation: wmImgIn 0.7s cubic-bezier(0.16,1,0.3,1) both;
+        }
+        .wm-img {
+          width: 100%;
+          display: block;
+          object-fit: cover;
+        }
+        .wm-img-wrap:nth-child(1) .wm-img { aspect-ratio: 4/3; }
+        .wm-img-wrap:nth-child(2) .wm-img { aspect-ratio: 16/9; }
+        .wm-img-wrap:nth-child(3) .wm-img { aspect-ratio: 3/4; }
+        .wm-img-fallback {
+          display: none;
+          width: 100%;
+          aspect-ratio: 4/3;
+          align-items: center;
+          justify-content: center;
+        }
+        .wm-img-caption {
+          position: absolute;
+          bottom: 36px;
+          left: 0;
+          right: 0;
+          padding: 8px 12px;
+          clip-path: polygon(0 8px, 100% 0, 100% 100%, 0 100%);
+          background: rgba(6,6,6,0.65);
+          backdrop-filter: blur(4px);
+          -webkit-backdrop-filter: blur(4px);
+        }
+        .wm-img-caption span {
+          font-family: 'DM Mono', monospace;
+          font-size: 8px;
+          letter-spacing: 0.12em;
+          line-height: 1.6;
+        }
+        /* RIGHT: text column */
+        .wm-text {
+          flex: 1;
+          overflow-y: auto;
+          overflow-x: hidden;
+          padding: 0 48px 80px 36px;
+          position: relative;
+          scrollbar-width: none;
+        }
+        .wm-text::-webkit-scrollbar { display: none; }
+        .wm-ghost-num {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: clamp(100px, 18vw, 200px);
+          font-weight: 600;
+          font-style: italic;
+          line-height: 0.85;
+          letter-spacing: -0.04em;
+          position: absolute;
+          top: -20px;
+          right: 32px;
+          pointer-events: none;
+          user-select: none;
+          animation: wmTextIn 0.8s cubic-bezier(0.16,1,0.3,1) 0.08s both;
+        }
+        .wm-headline {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: clamp(40px, 5.5vw, 78px);
+          font-weight: 300;
+          font-style: italic;
+          line-height: 0.95;
+          letter-spacing: -0.03em;
+          margin-bottom: 14px;
+          position: relative;
+          z-index: 1;
+          animation: wmTextIn 0.7s cubic-bezier(0.16,1,0.3,1) 0.16s both;
+        }
+        .wm-tags {
+          display: flex;
+          gap: 14px;
+          flex-wrap: wrap;
+          margin-bottom: 28px;
+          animation: wmTextIn 0.6s cubic-bezier(0.16,1,0.3,1) 0.22s both;
+        }
+        .wm-tag {
+          font-family: 'DM Mono', monospace;
+          font-size: 9px;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+        }
+        .wm-pullquote {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: clamp(15px, 2vw, 21px);
+          font-weight: 300;
+          font-style: italic;
+          color: rgba(240,237,230,0.65);
+          line-height: 1.45;
+          border-left: 2px solid;
+          padding-left: 16px;
+          margin: 0 0 22px;
+          animation: wmTextIn 0.7s cubic-bezier(0.16,1,0.3,1) 0.28s both;
+        }
+        .wm-worknote {
+          font-family: 'DM Mono', monospace;
+          font-size: 10px;
+          font-weight: 400;
+          color: rgba(240,237,230,0.55);
+          line-height: 1.8;
+          margin-bottom: 28px;
+          animation: wmTextIn 0.7s cubic-bezier(0.16,1,0.3,1) 0.32s both;
+        }
+        .wm-rule {
+          height: 2px;
+          width: 100%;
+          margin-bottom: 28px;
+          transform: skewX(-12deg);
+          transform-origin: left center;
+          animation: wmTextIn 0.6s cubic-bezier(0.16,1,0.3,1) 0.36s both;
+        }
+        .wm-stats {
+          display: flex;
+          gap: 28px;
+          flex-wrap: wrap;
+          margin-bottom: 36px;
+          animation: wmTextIn 0.7s cubic-bezier(0.16,1,0.3,1) 0.40s both;
+        }
+        .wm-stat { display: flex; flex-direction: column; gap: 4px; }
+        .wm-stat-value {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: clamp(30px, 4vw, 48px);
+          font-weight: 300;
+          font-style: italic;
+          line-height: 1;
+          letter-spacing: -0.02em;
+        }
+        .wm-stat-label {
+          font-family: 'DM Mono', monospace;
+          font-size: 8px;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          color: rgba(240,237,230,0.22);
+        }
+        .wm-body-text {
+          font-family: 'DM Mono', monospace;
+          font-size: 10px;
+          font-weight: 300;
+          color: rgba(240,237,230,0.38);
+          line-height: 2;
+          white-space: pre-line;
+          margin-bottom: 36px;
+          animation: wmTextIn 0.8s cubic-bezier(0.16,1,0.3,1) 0.44s both;
+        }
+        .wm-link {
+          display: inline-block;
+          font-family: 'DM Mono', monospace;
+          font-size: 9px;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          text-decoration: none;
+          transition: color 0.2s ease;
+          animation: wmTextIn 0.6s cubic-bezier(0.16,1,0.3,1) 0.50s both;
+        }
+
         /* ── Mobile ── */
         @media (max-width: 768px) {
           .site-wrap { padding: 0 20px !important; }
@@ -769,11 +1212,50 @@ export default function Portfolio() {
           }
         }
 
+        /* ── Work Modal Mobile ── */
+        @media (max-width: 768px) {
+          .wm-panel { width: 100%; max-width: 100%; }
+          .wm-eyebrow { padding: 24px 20px 0; }
+          .wm-eyebrow-year { margin-right: 52px; }
+          .wm-body {
+            flex-direction: column;
+            overflow-y: auto;
+            overflow-x: hidden;
+          }
+          .wm-images {
+            width: 100%;
+            flex-direction: row;
+            overflow-x: auto;
+            overflow-y: hidden;
+            padding: 16px 20px;
+            flex-shrink: 0;
+          }
+          .wm-img-wrap {
+            flex-shrink: 0;
+            width: 72vw;
+            margin-bottom: 0;
+            animation-delay: 0s !important;
+          }
+          .wm-img-wrap .wm-img,
+          .wm-img-wrap:nth-child(1) .wm-img,
+          .wm-img-wrap:nth-child(2) .wm-img,
+          .wm-img-wrap:nth-child(3) .wm-img { aspect-ratio: 4/3; }
+          .wm-text {
+            overflow-y: visible;
+            overflow-x: hidden;
+            padding: 16px 20px 80px;
+          }
+          .wm-ghost-num { font-size: clamp(70px, 24vw, 110px); right: 12px; }
+          .wm-headline { font-size: clamp(34px, 9vw, 56px); }
+          .wm-close { top: 16px; right: 16px; cursor: pointer; }
+          .wm-link { cursor: pointer; }
+        }
+
         /* Hide custom cursor on touch devices */
         @media (pointer: coarse) {
           .custom-cursor { display: none !important; }
           * { cursor: default !important; }
-          .detail-close, .detail-trigger { cursor: pointer !important; }
+          .detail-close, .detail-trigger, .wm-close, .wm-link { cursor: pointer !important; }
         }
       `}</style>
 
@@ -903,23 +1385,50 @@ export default function Portfolio() {
                         />
                       ))}
                     </div>
-                    {/* Full story trigger — appears after subitems settle */}
-                    <button
-                      className="detail-trigger"
-                      style={{
-                        color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.45)`,
-                        opacity: isOpen ? 0.7 : 0,
-                        transition: `opacity 0.4s ease ${isOpen ? triggerDelay : 0}s, color 0.2s ease`,
-                        pointerEvents: isOpen ? "auto" : "none",
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setHovered(null);
-                        setDetailed(p.id);
-                      }}
-                    >
-                      full story →
-                    </button>
+                    {/* Triggers — appear after subitems settle */}
+                    <div style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "20px",
+                      marginTop: "20px",
+                      opacity: isOpen ? 1 : 0,
+                      transition: `opacity 0.4s ease ${isOpen ? triggerDelay : 0}s`,
+                      pointerEvents: isOpen ? "auto" : "none",
+                    }}>
+                      <button
+                        className="detail-trigger"
+                        style={{
+                          color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.4)`,
+                          marginTop: 0,
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setHovered(null);
+                          setDetailed(p.id);
+                        }}
+                      >
+                        full story →
+                      </button>
+                      <span style={{
+                        width: "1px", height: "10px",
+                        background: `rgba(${rgb.r},${rgb.g},${rgb.b},0.18)`,
+                        flexShrink: 0,
+                      }} />
+                      <button
+                        className="detail-trigger"
+                        style={{
+                          color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.75)`,
+                          marginTop: 0,
+                          fontWeight: 400,
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setWorkModal(p.id);
+                        }}
+                      >
+                        view work →
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -957,6 +1466,15 @@ export default function Portfolio() {
           entry={experiences.find((p) => p.id === detailed)}
           onClose={handleDetailClose}
           closing={detailClosing}
+        />
+      )}
+
+      {/* Work modal */}
+      {workModal && (
+        <WorkModal
+          entry={experiences.find((p) => p.id === workModal)}
+          onClose={handleWorkModalClose}
+          closing={workModalClosing}
         />
       )}
     </div>

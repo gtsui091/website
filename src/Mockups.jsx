@@ -823,6 +823,8 @@ function MockupC() {
   );
 }
 
+export { MockupC };
+
 // ─── Mockup selector ──────────────────────────────────────────────────────────
 
 const TABS = [

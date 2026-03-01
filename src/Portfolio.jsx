@@ -206,6 +206,39 @@ function SubItem({ item, color, index, visible }) {
   );
 }
 
+const SCRAMBLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#%^&*";
+
+function ScrambleTitle({ text, active, className, style }) {
+  const [display, setDisplay] = useState(text);
+  const frameRef = useRef(null);
+
+  useEffect(() => {
+    cancelAnimationFrame(frameRef.current);
+    if (!active) {
+      setDisplay(text);
+      return;
+    }
+    let start = null;
+    const duration = 420;
+    const tick = (ts) => {
+      if (!start) start = ts;
+      const progress = Math.min((ts - start) / duration, 1);
+      const resolved = Math.floor(progress * text.length);
+      setDisplay(
+        text.split("").map((ch, i) => {
+          if (i < resolved || ch === " " || ch === "-") return ch;
+          return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+        }).join("")
+      );
+      if (progress < 1) frameRef.current = requestAnimationFrame(tick);
+    };
+    frameRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frameRef.current);
+  }, [active, text]);
+
+  return <span className={className} style={style}>{display}</span>;
+}
+
 const GRAIN_URL = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`;
 
 function DetailView({ entry, onClose, closing }) {
@@ -529,8 +562,12 @@ export default function Portfolio() {
           border-top: 1px solid rgba(240,237,230,0.07);
           cursor: none;
           position: relative;
+          opacity: 1;
+          transition: opacity 0.35s ease;
         }
         .pr:last-child { border-bottom: 1px solid rgba(240,237,230,0.07); }
+
+        .list-hovering .pr:not(.pr-hov) { opacity: 0.35; }
 
         .pr-main {
           display: flex;
@@ -566,7 +603,7 @@ export default function Portfolio() {
           color: rgba(240,237,230,0.82);
           letter-spacing: -0.025em;
           line-height: 1;
-          transition: color 0.3s ease, transform 0.45s cubic-bezier(0.16,1,0.3,1);
+          transition: color 0.3s ease, transform 0.45s cubic-bezier(0.16,1,0.3,1), text-shadow 0.45s ease;
           transform-origin: left center;
         }
         .pr:hover .ptitle { transform: translateX(10px); }
@@ -1334,7 +1371,7 @@ export default function Portfolio() {
         </header>
 
         {/* Experience list */}
-        <main className={entered ? "entered" : ""}>
+        <main className={`${entered ? "entered" : ""} ${hovered ? "list-hovering" : ""}`}>
           {experiences.map((p) => {
             const isOpen = expanded === p.id;
             const rgb = hexRgb(p.accent);
@@ -1342,7 +1379,7 @@ export default function Portfolio() {
             return (
               <div
                 key={p.id}
-                className="pr"
+                className={`pr${hovered === p.id ? " pr-hov" : ""}`}
                 onMouseEnter={!isMobile ? () => setHovered(p.id) : undefined}
                 onMouseLeave={!isMobile ? () => setHovered(null) : undefined}
                 onClick={() => setExpanded(expanded === p.id ? null : p.id)}
@@ -1351,7 +1388,17 @@ export default function Portfolio() {
                 <div className="pr-main">
                   <span className="pnum" style={{ color: isOpen ? p.accent : undefined }}>{p.num}</span>
                   <div className="ptitle-group">
-                    <span className="ptitle" style={{ color: isOpen ? p.accent : undefined }}>{p.title}</span>
+                    <ScrambleTitle
+                      className="ptitle"
+                      text={p.title}
+                      active={hovered === p.id}
+                      style={{
+                        color: isOpen ? p.accent : undefined,
+                        textShadow: hovered === p.id
+                          ? `0 0 24px rgba(${rgb.r},${rgb.g},${rgb.b},0.38), 0 0 64px rgba(${rgb.r},${rgb.g},${rgb.b},0.12)`
+                          : `0 0 0px rgba(${rgb.r},${rgb.g},${rgb.b},0)`,
+                      }}
+                    />
                     <div className="ptags">
                       {p.tags.map((tag) => (
                         <span key={tag} className="ptag" style={{

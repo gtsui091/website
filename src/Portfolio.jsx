@@ -220,7 +220,7 @@ export default function Portfolio() {
 
         .pr-main {
           display: flex;
-          align-items: center;
+          align-items: flex-start;
           gap: 12px;
           padding: 18px 0;
         }
@@ -234,6 +234,14 @@ export default function Portfolio() {
           transition: color 0.35s ease;
           font-family: 'DM Mono', monospace;
           font-weight: 300;
+          align-self: center;
+        }
+
+        .ptitle-group {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
         }
 
         .ptitle {
@@ -244,7 +252,6 @@ export default function Portfolio() {
           color: rgba(240,237,230,0.82);
           letter-spacing: -0.025em;
           line-height: 1;
-          flex: 1;
           transition: color 0.3s ease, transform 0.45s cubic-bezier(0.16,1,0.3,1);
           transform-origin: left center;
         }
@@ -265,7 +272,7 @@ export default function Portfolio() {
           font-family: 'DM Mono', monospace;
         }
 
-        .ptags { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+        .ptags { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-start; }
         .ptag {
           font-size: 9px;
           letter-spacing: 0.13em;
@@ -350,12 +357,7 @@ export default function Portfolio() {
             padding: 20px 0;
           }
 
-          .pnum { padding-top: 6px; }
-
-          .ptitle {
-            flex: 1 1 auto;
-            font-size: clamp(28px, 9vw, 52px) !important;
-          }
+          .ptitle { font-size: clamp(28px, 9vw, 52px) !important; }
 
           .pr:hover .ptitle { transform: none; }
 
@@ -378,8 +380,6 @@ export default function Portfolio() {
             align-items: flex-start !important;
             padding-top: 6px;
           }
-
-          .ptags { justify-content: flex-start !important; }
 
           .pdesc {
             text-align: left !important;
@@ -489,7 +489,16 @@ export default function Portfolio() {
                 {/* Main row */}
                 <div className="pr-main">
                   <span className="pnum" style={{ color: isHov ? p.accent : undefined }}>{p.num}</span>
-                  <span className="ptitle" style={{ color: isHov ? p.accent : undefined }}>{p.title}</span>
+                  <div className="ptitle-group">
+                    <span className="ptitle" style={{ color: isHov ? p.accent : undefined }}>{p.title}</span>
+                    <div className="ptags">
+                      {p.tags.map((tag) => (
+                        <span key={tag} className="ptag" style={{
+                          color: isHov ? `rgba(${rgb.r},${rgb.g},${rgb.b},0.65)` : undefined,
+                        }}>{tag}</span>
+                      ))}
+                    </div>
+                  </div>
                   <span
                     className={`pchevron${isHov ? " open" : ""}`}
                     style={{ color: isHov ? `rgba(${rgb.r},${rgb.g},${rgb.b},0.5)` : undefined }}
@@ -497,13 +506,6 @@ export default function Portfolio() {
                   >›</span>
                   <div className="pmeta">
                     <span className="pyear">{p.year}</span>
-                    <div className="ptags">
-                      {p.tags.map((tag) => (
-                        <span key={tag} className="ptag" style={{
-                          color: isHov ? `rgba(${rgb.r},${rgb.g},${rgb.b},0.55)` : undefined,
-                        }}>{tag}</span>
-                      ))}
-                    </div>
                     <p className={`pdesc${isHov ? " vis" : ""}`}>{p.desc}</p>
                   </div>
                 </div>

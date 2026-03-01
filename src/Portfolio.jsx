@@ -323,6 +323,8 @@ export default function Portfolio() {
         @keyframes fIn { from { opacity: 0; } to { opacity: 1; } }
         .fin { animation: fIn 1s ease 0.85s both; }
 
+        .pchevron { display: none; }
+
         /* ── Mobile ── */
         @media (max-width: 768px) {
           .site-wrap { padding: 0 20px !important; }
@@ -336,7 +338,10 @@ export default function Portfolio() {
 
           .site-nav { display: none; }
 
-          .pr { cursor: default; }
+          .pr {
+            cursor: default;
+            touch-action: manipulation;
+          }
 
           .pr-main {
             flex-wrap: wrap;
@@ -353,6 +358,19 @@ export default function Portfolio() {
           }
 
           .pr:hover .ptitle { transform: none; }
+
+          .pchevron {
+            display: flex;
+            align-items: center;
+            font-size: 14px;
+            color: rgba(240,237,230,0.18);
+            transition: transform 0.4s cubic-bezier(0.16,1,0.3,1), color 0.3s ease;
+            flex-shrink: 0;
+            align-self: center;
+            padding: 0 2px;
+            font-style: normal;
+          }
+          .pchevron.open { transform: rotate(90deg); }
 
           .pmeta {
             width: 100%;
@@ -472,6 +490,11 @@ export default function Portfolio() {
                 <div className="pr-main">
                   <span className="pnum" style={{ color: isHov ? p.accent : undefined }}>{p.num}</span>
                   <span className="ptitle" style={{ color: isHov ? p.accent : undefined }}>{p.title}</span>
+                  <span
+                    className={`pchevron${isHov ? " open" : ""}`}
+                    style={{ color: isHov ? `rgba(${rgb.r},${rgb.g},${rgb.b},0.5)` : undefined }}
+                    aria-hidden="true"
+                  >›</span>
                   <div className="pmeta">
                     <span className="pyear">{p.year}</span>
                     <div className="ptags">

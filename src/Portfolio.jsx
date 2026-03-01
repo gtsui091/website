@@ -20,6 +20,15 @@ const experiences = [
       { label: "Infrastructure", detail: "Zero-downtime AWS OpsWorks migration + Intel-to-Arm server transition." },
       { label: "Subscriptions", detail: "Prepaid, Try Before You Buy, variable trials — architected for long-term flexibility." },
     ],
+    story: {
+      headline: "A retention turnaround built on shipping velocity.",
+      body: "When I joined FORM as Web Team Lead, the web product was leaking subscribers — churn sat at 13%. Over the next year I led a focused effort to close the gap between development speed and user retention. The breakthrough was Streaks: a gamification feature taken from internal hackathon to A/B production in weeks, which drove measurable improvement on its own. Alongside it, I built the Web-Driven UI framework — a system that let us ship UI changes through the web layer, breaking free from the mobile release cycle and enabling tight iteration loops.\n\nOn the infrastructure side, I led a zero-downtime migration off AWS OpsWorks during an Intel-to-Arm server transition, and redesigned the subscription architecture to support prepaid plans, Try Before You Buy, and variable trials. By the end of the year, churn had dropped to 6%.",
+      stats: [
+        { value: "13→6%", label: "Churn rate" },
+        { value: "4 wks", label: "Hackathon to prod" },
+        { value: "0", label: "Downtime incidents" },
+      ],
+    },
   },
   {
     id: 2, num: "02", title: "Sea Around Us",
@@ -40,6 +49,15 @@ const experiences = [
       { label: "Manila Workshop", detail: "Led a 3-week training at Q-Quatics, Philippines for ongoing data maintenance partnership." },
       { label: "Research", detail: "Co-authored 6 articles in peer-reviewed scientific journals." },
     ],
+    story: {
+      headline: "Spatial data at the scale of the world's oceans.",
+      body: "I stepped into the Sea Around Us project mid-transition — the previous developer had left, and the codebase was in flux. My first task was to stabilise the production data pipeline and rebuild the processing layer during a full stack migration. Over time I went deeper, integrating PostGIS spatial dimensions into the PostgreSQL database, opening up new geographic queries across one of the world's largest open fisheries datasets.\n\nThe work extended beyond the codebase. I deployed the stack via AWS and Jenkins, set up a data maintenance partnership through a 3-week hands-on training in Manila at Q-Quatics, and collaborated with marine researchers across the team — contributing to 6 peer-reviewed journal articles on global fisheries science.",
+      stats: [
+        { value: "6", label: "Journal articles" },
+        { value: "3 wks", label: "Manila workshop" },
+        { value: "PostGIS", label: "Spatial layer" },
+      ],
+    },
   },
   {
     id: 3, num: "03", title: "Backcountry Wok",
@@ -64,6 +82,15 @@ const experiences = [
       { label: "Mission", detail: "Tackled the lack of Asian outdoor foods and plastic waste in consumer-packaged goods." },
       { label: "Press", detail: "Featured in Edible Ottawa, March 2019 edition." },
     ],
+    story: {
+      headline: "Instant, compostable, and unapologetically Asian.",
+      body: "Backcountry Wok started from a real frustration: the outdoor food market was full of pasta and granola but had almost nothing for the Asian diaspora, and nearly everything came in single-use plastic. We co-founded the company to address both gaps at once — instant, dried Asian meals in heat-resistant, 100% compostable bags, designed for backcountry trips and day hikes.\n\nWe scaled from a Vancouver launch to distribution in Ottawa, built relationships with outdoor retailers, and earned editorial coverage in the March 2019 edition of Edible Ottawa. The brand proved that sustainability and cultural specificity weren't trade-offs — they were the product.",
+      stats: [
+        { value: "100%", label: "Compostable" },
+        { value: "2", label: "Cities" },
+        { value: "2019", label: "Edible Ottawa" },
+      ],
+    },
   },
 ];
 
@@ -187,6 +214,87 @@ function SubItem({ item, color, index, visible }) {
   );
 }
 
+const GRAIN_URL = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`;
+
+function DetailView({ entry, onClose, closing }) {
+  const rgb = hexRgb(entry.accent);
+  return (
+    <div
+      className={`detail-overlay${closing ? " closing" : ""}`}
+      style={{ backgroundColor: entry.bg }}
+      onClick={onClose}
+    >
+      {/* Canvas hero — full viewport at higher opacity than main page */}
+      <div className="detail-canvas-wrap">
+        <ProjectVisual visual={entry.visual} color={entry.accent} />
+      </div>
+
+      {/* Gradient scrim for text readability */}
+      <div className="detail-gradient" />
+
+      {/* Grain texture */}
+      <div className="detail-grain" />
+
+      {/* Close button */}
+      <button className="detail-close" onClick={onClose} aria-label="Close">×</button>
+
+      {/* Scrollable content */}
+      <div className="detail-content" onClick={(e) => e.stopPropagation()}>
+
+        <div className="detail-eyebrow">
+          <span>{entry.num}</span>
+          <span>{entry.year}</span>
+        </div>
+
+        <h2 className="detail-title" style={{ color: entry.accent }}>{entry.title}</h2>
+
+        <div className="detail-tags">
+          {entry.tags.map((tag) => (
+            <span key={tag} className="detail-tag" style={{ color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.55)` }}>
+              {tag}
+            </span>
+          ))}
+        </div>
+
+        <p className="detail-headline">{entry.story.headline}</p>
+
+        <p className="detail-body">{entry.story.body}</p>
+
+        {entry.story.stats && (
+          <div className="detail-stats">
+            {entry.story.stats.map((stat) => (
+              <div key={stat.label} className="detail-stat">
+                <span className="detail-stat-value" style={{ color: entry.accent }}>{stat.value}</span>
+                <span className="detail-stat-label">{stat.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="detail-rule" style={{ background: `rgba(${rgb.r},${rgb.g},${rgb.b},0.12)` }} />
+
+        <div className="detail-subitems">
+          {entry.subitems.map((sub, i) => (
+            <SubItem key={sub.label} item={sub} color={entry.accent} index={i} visible={true} />
+          ))}
+        </div>
+
+        {entry.story.link && (
+          <a
+            className="detail-link"
+            href={entry.story.link.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.55)` }}
+          >
+            {entry.story.link.label} ↗
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Portfolio() {
   const [hovered, setHovered] = useState(null);
   const [cursor, setCursor] = useState({ x: -100, y: -100 });
@@ -195,8 +303,20 @@ export default function Portfolio() {
   const [isMobile, setIsMobile] = useState(() =>
     typeof window !== "undefined" && window.innerWidth <= 768
   );
+  const [detailed, setDetailed] = useState(null);
+  const [detailClosing, setDetailClosing] = useState(false);
+  const detailCloseTimer = useRef(null);
 
   const active = experiences.find((p) => p.id === hovered);
+
+  const handleDetailClose = () => {
+    if (detailCloseTimer.current) clearTimeout(detailCloseTimer.current);
+    setDetailClosing(true);
+    detailCloseTimer.current = setTimeout(() => {
+      setDetailed(null);
+      setDetailClosing(false);
+    }, 350);
+  };
 
   useEffect(() => {
     const t = setTimeout(() => setEntered(true), 80);
@@ -222,6 +342,19 @@ export default function Portfolio() {
       document.removeEventListener("mouseleave", hide);
     };
   }, []);
+
+  // Esc key dismisses detail overlay
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape" && detailed) handleDetailClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [detailed]);
+
+  // Scroll lock while detail overlay is open
+  useEffect(() => {
+    document.body.style.overflow = detailed ? "hidden" : "";
+    return () => { document.body.style.overflow = ""; };
+  }, [detailed]);
 
   const bgColor = active ? active.bg : "#0c0c0c";
   const accentColor = active ? active.accent : "#f0ede6";
@@ -323,14 +456,8 @@ export default function Portfolio() {
         }
         .pdesc.vis { color: rgba(240,237,230,0.5); }
 
-        .logo-wrap {
-          padding-bottom: 20px;
-        }
-        .logo-wrap svg {
-          height: 32px;
-          width: auto;
-          opacity: 0.85;
-        }
+        .logo-wrap { padding-bottom: 20px; }
+        .logo-wrap svg { height: 32px; width: auto; opacity: 0.85; }
 
         .subitems-wrap {
           max-height: 0;
@@ -340,7 +467,7 @@ export default function Portfolio() {
           padding-bottom: 0;
         }
         .subitems-wrap.open {
-          max-height: 500px;
+          max-height: 600px;
           padding-bottom: 24px;
         }
 
@@ -349,6 +476,21 @@ export default function Portfolio() {
           flex-direction: column;
           gap: 12px;
         }
+
+        .detail-trigger {
+          font-family: 'DM Mono', monospace;
+          font-size: 9px;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          background: none;
+          border: none;
+          padding: 0;
+          margin-top: 20px;
+          cursor: none;
+          display: block;
+          transition: color 0.2s ease, opacity 0.4s ease;
+        }
+        .detail-trigger:hover { opacity: 1 !important; }
 
         @keyframes fadeUp {
           from { opacity: 0; transform: translateY(30px); }
@@ -369,6 +511,199 @@ export default function Portfolio() {
         .fin { animation: fIn 1s ease 0.85s both; }
 
         .pchevron { display: none; }
+
+        /* ── Detail Overlay ── */
+        @keyframes detailIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes detailOut {
+          from { opacity: 1; }
+          to   { opacity: 0; }
+        }
+        @keyframes detailUp {
+          from { opacity: 0; transform: translateY(40px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .detail-overlay {
+          position: fixed;
+          inset: 0;
+          z-index: 100;
+          overflow-y: auto;
+          overflow-x: hidden;
+          animation: detailIn 0.5s cubic-bezier(0.16,1,0.3,1) both;
+        }
+        .detail-overlay.closing {
+          animation: detailOut 0.35s cubic-bezier(0.16,1,0.3,1) both;
+        }
+
+        .detail-canvas-wrap {
+          position: fixed;
+          inset: 0;
+          opacity: 0.45;
+          pointer-events: none;
+          z-index: 0;
+        }
+
+        .detail-gradient {
+          position: fixed;
+          inset: 0;
+          background: linear-gradient(to bottom, transparent 0%, rgba(8,8,8,0.5) 40%, rgba(8,8,8,0.92) 80%);
+          pointer-events: none;
+          z-index: 1;
+        }
+
+        .detail-grain {
+          position: fixed;
+          inset: 0;
+          pointer-events: none;
+          z-index: 2;
+          opacity: 0.035;
+          background-image: ${GRAIN_URL};
+          background-size: 180px 180px;
+        }
+
+        .detail-close {
+          position: fixed;
+          top: 40px;
+          right: 48px;
+          z-index: 200;
+          font-family: 'DM Mono', monospace;
+          font-size: 20px;
+          color: rgba(240,237,230,0.3);
+          background: none;
+          border: none;
+          cursor: none;
+          padding: 8px;
+          line-height: 1;
+          transition: color 0.2s ease;
+        }
+        .detail-close:hover { color: rgba(240,237,230,0.9); }
+
+        .detail-content {
+          position: relative;
+          z-index: 10;
+          max-width: 1100px;
+          margin: 0 auto;
+          padding: 120px 48px 100px;
+        }
+
+        .detail-eyebrow {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-family: 'DM Mono', monospace;
+          font-size: 9px;
+          letter-spacing: 0.16em;
+          color: rgba(240,237,230,0.2);
+          text-transform: uppercase;
+          margin-bottom: 24px;
+          animation: detailUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.10s both;
+        }
+
+        .detail-title {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: clamp(64px, 10vw, 130px);
+          font-weight: 300;
+          font-style: italic;
+          letter-spacing: -0.03em;
+          line-height: 0.95;
+          margin-bottom: 20px;
+          animation: detailUp 0.8s cubic-bezier(0.16,1,0.3,1) 0.18s both;
+        }
+
+        .detail-tags {
+          display: flex;
+          gap: 16px;
+          flex-wrap: wrap;
+          margin-bottom: 60px;
+          animation: detailUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.26s both;
+        }
+
+        .detail-tag {
+          font-family: 'DM Mono', monospace;
+          font-size: 9px;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+        }
+
+        .detail-headline {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: clamp(22px, 3vw, 36px);
+          font-weight: 300;
+          font-style: italic;
+          color: rgba(240,237,230,0.75);
+          line-height: 1.3;
+          max-width: 680px;
+          margin-bottom: 32px;
+          animation: detailUp 0.8s cubic-bezier(0.16,1,0.3,1) 0.32s both;
+        }
+
+        .detail-body {
+          font-family: 'DM Mono', monospace;
+          font-size: 10px;
+          font-weight: 300;
+          color: rgba(240,237,230,0.45);
+          line-height: 2;
+          max-width: 620px;
+          margin-bottom: 64px;
+          white-space: pre-line;
+          animation: detailUp 0.8s cubic-bezier(0.16,1,0.3,1) 0.38s both;
+        }
+
+        .detail-stats {
+          display: flex;
+          gap: 48px;
+          flex-wrap: wrap;
+          margin-bottom: 56px;
+          animation: detailUp 0.8s cubic-bezier(0.16,1,0.3,1) 0.44s both;
+        }
+
+        .detail-stat-value {
+          display: block;
+          font-family: 'Cormorant Garamond', serif;
+          font-size: clamp(36px, 5vw, 56px);
+          font-weight: 300;
+          font-style: italic;
+          line-height: 1;
+          letter-spacing: -0.02em;
+        }
+
+        .detail-stat-label {
+          display: block;
+          font-family: 'DM Mono', monospace;
+          font-size: 8px;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          color: rgba(240,237,230,0.22);
+          margin-top: 6px;
+        }
+
+        .detail-rule {
+          height: 1px;
+          margin-bottom: 40px;
+          animation: detailUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.48s both;
+        }
+
+        .detail-subitems {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 20px 48px;
+          margin-bottom: 56px;
+          animation: detailUp 0.8s cubic-bezier(0.16,1,0.3,1) 0.52s both;
+        }
+
+        .detail-link {
+          display: inline-block;
+          font-family: 'DM Mono', monospace;
+          font-size: 9px;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          text-decoration: none;
+          transition: color 0.2s ease;
+          animation: detailUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.58s both;
+        }
 
         /* ── Mobile ── */
         @media (max-width: 768px) {
@@ -426,6 +761,28 @@ export default function Portfolio() {
 
           .subitems-wrap { padding-left: 0 !important; }
 
+          .detail-close {
+            top: 20px;
+            right: 20px;
+            cursor: pointer;
+          }
+
+          .detail-content {
+            padding: 80px 20px 60px;
+          }
+
+          .detail-subitems {
+            grid-template-columns: 1fr;
+          }
+
+          .detail-canvas-wrap {
+            opacity: 0.3;
+          }
+
+          .detail-trigger {
+            cursor: pointer;
+          }
+
           .site-footer {
             flex-direction: column !important;
             gap: 16px;
@@ -439,6 +796,7 @@ export default function Portfolio() {
         @media (pointer: coarse) {
           .custom-cursor { display: none !important; }
           * { cursor: default !important; }
+          .detail-close, .detail-trigger { cursor: pointer !important; }
         }
       `}</style>
 
@@ -450,7 +808,7 @@ export default function Portfolio() {
         pointerEvents: "none",
         zIndex: 9999,
         mixBlendMode: "difference",
-        transform: `translate(-50%, -50%) scale(${hovered ? 2.2 : 1})`,
+        transform: `translate(-50%, -50%) scale(${hovered && !detailed ? 2.2 : 1})`,
         transition: "transform 0.18s ease, opacity 0.2s ease",
         opacity: cursorVisible ? 1 : 0,
       }}>
@@ -474,7 +832,7 @@ export default function Portfolio() {
       {/* Grain overlay */}
       <div style={{
         position: "fixed", inset: 0, pointerEvents: "none", zIndex: 1, opacity: 0.035,
-        backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+        backgroundImage: GRAIN_URL,
         backgroundSize: "180px 180px",
       }} />
 
@@ -516,6 +874,7 @@ export default function Portfolio() {
           {experiences.map((p) => {
             const isHov = hovered === p.id;
             const rgb = hexRgb(p.accent);
+            const triggerDelay = 0.08 + p.subitems.length * 0.07 + 0.15;
             return (
               <div
                 key={p.id}
@@ -548,7 +907,7 @@ export default function Portfolio() {
                   </div>
                 </div>
 
-                {/* Expandable sub-items + logo */}
+                {/* Expandable sub-items + logo + full story trigger */}
                 {(p.subitems || p.logo) && (
                   <div className={`subitems-wrap${isHov ? " open" : ""}`}>
                     {p.logo && (
@@ -569,6 +928,23 @@ export default function Portfolio() {
                         ))}
                       </div>
                     )}
+                    {/* Full story trigger — fades in after subitems settle */}
+                    <button
+                      className="detail-trigger"
+                      style={{
+                        color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.45)`,
+                        opacity: isHov ? 0.7 : 0,
+                        transition: `opacity 0.4s ease ${isHov ? triggerDelay : 0}s, color 0.2s ease`,
+                        pointerEvents: isHov ? "auto" : "none",
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setHovered(null);
+                        setDetailed(p.id);
+                      }}
+                    >
+                      full story →
+                    </button>
                   </div>
                 )}
               </div>
@@ -599,6 +975,15 @@ export default function Portfolio() {
           </div>
         </footer>
       </div>
+
+      {/* Detail view overlay */}
+      {detailed && (
+        <DetailView
+          entry={experiences.find((p) => p.id === detailed)}
+          onClose={handleDetailClose}
+          closing={detailClosing}
+        />
+      )}
     </div>
   );
 }

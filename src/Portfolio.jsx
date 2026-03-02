@@ -167,13 +167,11 @@ function ProjectVisual({ visual, color }) {
 
 const GRAIN_URL = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`;
 
-const SCRAMBLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#%^&*";
+const SCRAMBLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 function ScrambleTitle({ text, active, className, style }) {
   const [display, setDisplay] = useState(text);
   const timerRef = useRef(null);
-  const glitchTimerRef = useRef(null);
-  const glitchIntervalRef = useRef(null);
   const activeRef = useRef(active);
   const textRef = useRef(text);
 
@@ -202,53 +200,9 @@ function ScrambleTitle({ text, active, className, style }) {
           return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
         }).join("")
       );
-    }, 30);
+    }, 55);
     return () => clearInterval(timerRef.current);
   }, [active, text]);
-
-  useEffect(() => {
-    function scheduleNextGlitch(firstFire = false) {
-      const delay = firstFire
-        ? 500 + Math.random() * 1500
-        : 4000 + Math.random() * 8000;
-      glitchTimerRef.current = setTimeout(() => {
-        if (activeRef.current) { scheduleNextGlitch(); return; }
-        fireGlitch();
-      }, delay);
-    }
-
-    function fireGlitch() {
-      const glitchDuration = 300 + Math.random() * 200;
-      const start = Date.now();
-      glitchIntervalRef.current = setInterval(() => {
-        if (activeRef.current) {
-          clearInterval(glitchIntervalRef.current);
-          setDisplay(textRef.current);
-          scheduleNextGlitch();
-          return;
-        }
-        if (Date.now() - start >= glitchDuration) {
-          clearInterval(glitchIntervalRef.current);
-          setDisplay(textRef.current);
-          scheduleNextGlitch();
-          return;
-        }
-        setDisplay(
-          textRef.current.split("").map((ch) => {
-            if (ch === " " || ch === "-") return ch;
-            return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
-          }).join("")
-        );
-      }, 30);
-    }
-
-    scheduleNextGlitch(true);
-
-    return () => {
-      clearTimeout(glitchTimerRef.current);
-      clearInterval(glitchIntervalRef.current);
-    };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return <span className={className} style={style}>{display}</span>;
 }

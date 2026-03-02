@@ -165,52 +165,20 @@ function ProjectVisual({ visual, color }) {
   return <canvas ref={canvasRef} style={{ width: "100%", height: "100%", display: "block" }} />;
 }
 
-function SubItem({ item, color, index, visible }) {
-  const rgb = hexRgb(color);
-  return (
-    <div style={{
-      display: "flex",
-      gap: "14px",
-      alignItems: "flex-start",
-      opacity: visible ? 1 : 0,
-      transform: visible ? "translateY(0)" : "translateY(8px)",
-      transition: `opacity 0.35s ease ${0.08 + index * 0.07}s, transform 0.4s cubic-bezier(0.16,1,0.3,1) ${0.08 + index * 0.07}s`,
-    }}>
-      <span style={{
-        fontFamily: "'DM Mono', monospace",
-        fontSize: "9px",
-        letterSpacing: "0.12em",
-        textTransform: "uppercase",
-        color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.65)`,
-        whiteSpace: "nowrap",
-        paddingTop: "1px",
-        width: "90px",
-        textAlign: "right",
-        flexShrink: 0,
-      }}>{item.label}</span>
-      <span style={{
-        width: "1px",
-        minHeight: "14px",
-        alignSelf: "stretch",
-        background: `rgba(${rgb.r},${rgb.g},${rgb.b},0.2)`,
-        flexShrink: 0,
-      }} />
-      <span style={{
-        fontFamily: "'DM Mono', monospace",
-        fontSize: "9px",
-        color: "rgba(240,237,230,0.38)",
-        lineHeight: 1.75,
-        fontWeight: 300,
-      }}>{item.detail}</span>
-    </div>
-  );
-}
+const GRAIN_URL = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`;
 
 const SCRAMBLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#%^&*";
 
 function ScrambleTitle({ text, active, className, style }) {
   const [display, setDisplay] = useState(text);
   const timerRef = useRef(null);
+  const glitchTimerRef = useRef(null);
+  const glitchIntervalRef = useRef(null);
+  const activeRef = useRef(active);
+  const textRef = useRef(text);
+
+  useEffect(() => { activeRef.current = active; }, [active]);
+  useEffect(() => { textRef.current = text; }, [text]);
 
   useEffect(() => {
     clearInterval(timerRef.current);
@@ -238,227 +206,197 @@ function ScrambleTitle({ text, active, className, style }) {
     return () => clearInterval(timerRef.current);
   }, [active, text]);
 
+  useEffect(() => {
+    function scheduleNextGlitch(firstFire = false) {
+      const delay = firstFire
+        ? 500 + Math.random() * 1500
+        : 4000 + Math.random() * 8000;
+      glitchTimerRef.current = setTimeout(() => {
+        if (activeRef.current) { scheduleNextGlitch(); return; }
+        fireGlitch();
+      }, delay);
+    }
+
+    function fireGlitch() {
+      const glitchDuration = 300 + Math.random() * 200;
+      const start = Date.now();
+      glitchIntervalRef.current = setInterval(() => {
+        if (activeRef.current) {
+          clearInterval(glitchIntervalRef.current);
+          setDisplay(textRef.current);
+          scheduleNextGlitch();
+          return;
+        }
+        if (Date.now() - start >= glitchDuration) {
+          clearInterval(glitchIntervalRef.current);
+          setDisplay(textRef.current);
+          scheduleNextGlitch();
+          return;
+        }
+        setDisplay(
+          textRef.current.split("").map((ch) => {
+            if (ch === " " || ch === "-") return ch;
+            return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+          }).join("")
+        );
+      }, 30);
+    }
+
+    scheduleNextGlitch(true);
+
+    return () => {
+      clearTimeout(glitchTimerRef.current);
+      clearInterval(glitchIntervalRef.current);
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   return <span className={className} style={style}>{display}</span>;
 }
 
-const GRAIN_URL = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`;
+// Types `text` character by character. Shows a solid ▮ cursor while in progress.
+// Calls onDone() once the last character has been printed.
+function TypewriterLine({ text, speed = 16, delay = 0, onDone }) {
+  const [chars, setChars] = useState(0);
+  const refs = useRef({ to: null, iv: null, notified: false });
 
-function DetailView({ entry, onClose, closing }) {
-  const rgb = hexRgb(entry.accent);
+  useEffect(() => {
+    const r = refs.current;
+    r.notified = false;
+    setChars(0);
+    r.to = setTimeout(() => {
+      let c = 0;
+      r.iv = setInterval(() => {
+        c++;
+        setChars(c);
+        if (c >= text.length) {
+          clearInterval(r.iv);
+          if (!r.notified) { r.notified = true; onDone?.(); }
+        }
+      }, speed);
+    }, delay);
+    return () => { clearTimeout(r.to); clearInterval(r.iv); };
+  }, [text, speed, delay]);
+
+  const done = chars >= text.length;
+  return <>{text.slice(0, chars)}{!done && <span style={{ opacity: 0.55 }}>▮</span>}</>;
+}
+
+// Label types left→right; the moment it finishes, detail text starts typing
+// left→right in the next column — one continuous motion per row.
+// onDone is called when the DETAIL finishes (full row complete).
+function TerminalSubItem({ sub, color, staggerDelay, labelSpeed, detailSpeed, onDone }) {
+  const [labelDone, setLabelDone] = useState(false);
+  const rgb = hexRgb(color);
+
   return (
-    <div
-      className={`detail-overlay${closing ? " closing" : ""}`}
-      style={{ backgroundColor: entry.bg }}
-      onClick={onClose}
-    >
-      {/* Canvas hero — full viewport, higher opacity than main page */}
-      <div className="detail-canvas-wrap">
-        <ProjectVisual visual={entry.visual} color={entry.accent} />
-      </div>
-
-      {/* Gradient scrim for text readability */}
-      <div className="detail-gradient" />
-
-      {/* Grain texture */}
-      <div className="detail-grain" />
-
-      {/* Close button */}
-      <button className="detail-close" onClick={onClose} aria-label="Close">×</button>
-
-      {/* Scrollable content — stopPropagation so clicking content doesn't close overlay */}
-      <div className="detail-content" onClick={(e) => e.stopPropagation()}>
-
-        {/* Eyebrow: num · year */}
-        <div className="detail-eyebrow">
-          <span>{entry.num}</span>
-          <span>{entry.year}</span>
-        </div>
-
-        {/* Giant italic title */}
-        <h2 className="detail-title" style={{ color: entry.accent }}>{entry.title}</h2>
-
-        {/* Tags */}
-        <div className="detail-tags">
-          {entry.tags.map((tag) => (
-            <span key={tag} className="detail-tag" style={{ color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.55)` }}>
-              {tag}
-            </span>
-          ))}
-        </div>
-
-        {/* Pull-quote headline */}
-        <p className="detail-headline">{entry.story.headline}</p>
-
-        {/* Narrative body */}
-        <p className="detail-body">{entry.story.body}</p>
-
-        {/* Stats row */}
-        {entry.story.stats && (
-          <div className="detail-stats">
-            {entry.story.stats.map((stat) => (
-              <div key={stat.label} className="detail-stat">
-                <span className="detail-stat-value" style={{ color: entry.accent }}>{stat.value}</span>
-                <span className="detail-stat-label">{stat.label}</span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Divider */}
-        <div className="detail-rule" style={{ background: `rgba(${rgb.r},${rgb.g},${rgb.b},0.12)` }} />
-
-        {/* Subitems — 2-col grid on desktop */}
-        <div className="detail-subitems">
-          {entry.subitems.map((sub, i) => (
-            <SubItem key={sub.label} item={sub} color={entry.accent} index={i} visible={true} />
-          ))}
-        </div>
-
-        {/* Optional external link */}
-        {entry.story.link && (
-          <a
-            className="detail-link"
-            href={entry.story.link.href}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.55)` }}
-          >
-            {entry.story.link.label} ↗
-          </a>
-        )}
-      </div>
+    <div style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: "14px", alignItems: "baseline" }}>
+      <span style={{
+        fontSize: "8px", letterSpacing: "0.12em", textTransform: "uppercase",
+        color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.6)`, textAlign: "right",
+      }}>
+        <TypewriterLine text={sub.label} speed={labelSpeed} delay={staggerDelay} onDone={() => setLabelDone(true)} />
+      </span>
+      <span style={{ fontSize: "9.5px", color: "rgba(240,237,230,0.33)", lineHeight: 1.7 }}>
+        {/* Only mount once the label column is done — cursor moves left→right into this column */}
+        {labelDone && <TypewriterLine text={`→ ${sub.detail}`} speed={detailSpeed} delay={0} onDone={onDone} />}
+      </span>
     </div>
   );
 }
 
-function WorkModal({ entry, onClose, closing }) {
-  const rgb = hexRgb(entry.accent);
+// Full entry row + expandable section. Trailing prompt waits for ALL detail
+// columns to finish typing (not just the labels).
+function TerminalEntry({ p, isOpen, onToggle, isHovered, onHoverEnter, onHoverLeave, blink }) {
+  const [allDone, setAllDone] = useState(false);
+  const doneCount = useRef(0);
+  const trailingTimer = useRef(null);
+  const rgb = hexRgb(p.accent);
+  const STAGGER = 220;     // ms between row label starts
+  const LABEL_SPEED = 16;  // ms per char — labels are short so this feels fast
+  const DETAIL_SPEED = 5;  // ms per char — details are longer, keep it snappy
+
+  useEffect(() => {
+    if (!isOpen) {
+      clearTimeout(trailingTimer.current);
+      setAllDone(false);
+      doneCount.current = 0;
+    }
+  }, [isOpen]);
+
+  const handleRowDone = () => {
+    doneCount.current++;
+    if (doneCount.current >= p.subitems.length) {
+      trailingTimer.current = setTimeout(() => setAllDone(true), 120);
+    }
+  };
 
   return (
     <div
-      className={`wm-overlay${closing ? " wm-closing" : ""}`}
-      onClick={onClose}
-      aria-modal="true"
-      role="dialog"
+      className="mc-entry"
+      onMouseEnter={onHoverEnter}
+      onMouseLeave={onHoverLeave}
+      onClick={onToggle}
     >
-      <div className="wm-backdrop" />
-      <div
-        className="wm-panel"
-        style={{ backgroundColor: entry.bg }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Close */}
-        <button
-          className="wm-close"
-          onClick={onClose}
-          aria-label="Close work view"
-          style={{ color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.4)` }}
-        >×</button>
-
-        {/* Eyebrow */}
-        <div className="wm-eyebrow">
-          <span className="wm-eyebrow-num" style={{ color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.2)` }}>
-            {entry.num}
-          </span>
-          <span className="wm-eyebrow-title">{entry.title}</span>
-          <span className="wm-eyebrow-year">{entry.year}</span>
+      {/* ── Main row ── */}
+      <div className="mc-row">
+        <span style={{ fontSize: "11px", color: isHovered || isOpen ? p.accent : "rgba(240,237,230,0.1)", transition: "color 0.22s", flexShrink: 0, width: "14px", lineHeight: 1 }}>
+          {isHovered || isOpen ? "▶" : "·"}
+        </span>
+        <span style={{ fontSize: "9px", color: isHovered ? p.accent : "rgba(240,237,230,0.17)", letterSpacing: "0.06em", flexShrink: 0, transition: "color 0.22s", lineHeight: 1 }}>{p.num}</span>
+        <div className="mc-title" style={{ flex: 1, color: isHovered ? p.accent : "rgba(240,237,230,0.82)" }}>
+          <ScrambleTitle text={p.title} active={isHovered} />
+          {(isHovered || isOpen) && (
+            <span style={{ opacity: blink ? 1 : 0, fontSize: "0.55em", verticalAlign: "middle", marginLeft: "5px", transition: "opacity 0.05s" }}>▮</span>
+          )}
         </div>
-
-        {/* Two-column body */}
-        <div className="wm-body">
-
-          {/* LEFT: image stack */}
-          <div className="wm-images">
-            {entry.images.map((img, i) => (
-              <div
-                key={i}
-                className="wm-img-wrap"
-                style={{ animationDelay: `${0.15 + i * 0.12}s` }}
-              >
-                <img
-                  src={img.src}
-                  alt={img.caption}
-                  className="wm-img"
-                  loading="lazy"
-                  onError={(e) => {
-                    e.currentTarget.style.display = "none";
-                    if (e.currentTarget.nextSibling) e.currentTarget.nextSibling.style.display = "flex";
-                  }}
-                />
-                <div
-                  className="wm-img-fallback"
-                  style={{ background: `rgba(${rgb.r},${rgb.g},${rgb.b},0.06)`, border: `1px solid rgba(${rgb.r},${rgb.g},${rgb.b},0.12)` }}
-                >
-                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: "9px", letterSpacing: "0.12em", color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.3)` }}>
-                    image unavailable
-                  </span>
-                </div>
-                {img.caption && (
-                  <div className="wm-img-caption">
-                    <span style={{ color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.55)` }}>{img.caption}</span>
-                  </div>
-                )}
-              </div>
+        <div style={{ textAlign: "right", flexShrink: 0 }}>
+          <div style={{ fontSize: "9px", color: "rgba(240,237,230,0.13)", letterSpacing: "0.08em", marginBottom: "5px" }}>{p.year}</div>
+          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", flexWrap: "wrap" }}>
+            {p.tags.map((tag) => (
+              <span key={tag} style={{ fontSize: "8px", letterSpacing: "0.12em", textTransform: "uppercase", color: `rgba(${rgb.r},${rgb.g},${rgb.b},${isHovered ? 0.58 : 0.18})`, transition: "color 0.22s" }}>{tag}</span>
             ))}
-          </div>
-
-          {/* RIGHT: editorial text */}
-          <div className="wm-text">
-            <div
-              className="wm-ghost-num"
-              style={{ color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.04)` }}
-            >{entry.num}</div>
-
-            <h2 className="wm-headline" style={{ color: entry.accent }}>{entry.title}</h2>
-
-            <div className="wm-tags">
-              {entry.tags.map((tag) => (
-                <span key={tag} className="wm-tag" style={{ color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.45)` }}>
-                  {tag}
-                </span>
-              ))}
-            </div>
-
-            <blockquote
-              className="wm-pullquote"
-              style={{ borderLeftColor: `rgba(${rgb.r},${rgb.g},${rgb.b},0.4)` }}
-            >
-              {entry.story.headline}
-            </blockquote>
-
-            {entry.workNote && (
-              <p className="wm-worknote">{entry.workNote}</p>
-            )}
-
-            <div className="wm-rule" style={{ background: `rgba(${rgb.r},${rgb.g},${rgb.b},0.12)` }} />
-
-            {entry.story.stats && (
-              <div className="wm-stats">
-                {entry.story.stats.map((stat) => (
-                  <div key={stat.label} className="wm-stat">
-                    <span className="wm-stat-value" style={{ color: entry.accent }}>{stat.value}</span>
-                    <span className="wm-stat-label">{stat.label}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <p className="wm-body-text">{entry.story.body}</p>
-
-            {entry.siteUrl && (
-              <a
-                className="wm-link"
-                href={entry.siteUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.6)` }}
-              >
-                visit site ↗
-              </a>
-            )}
           </div>
         </div>
       </div>
+
+      {/* ── Expanded section ── */}
+      {isOpen && (
+        <div className="mc-sub">
+          {/* Desc fades in immediately — too long to type comfortably */}
+          <div style={{ fontSize: "9.5px", color: "rgba(240,237,230,0.36)", lineHeight: 1.8, maxWidth: "580px", animation: "mcIn 0.3s cubic-bezier(0.16,1,0.3,1) both" }}>
+            {p.desc}
+          </div>
+
+          {/* Divider types out — gives the "terminal printing" feeling before subitems */}
+          <div style={{ fontSize: "9px", color: "rgba(240,237,230,0.08)", animation: "mcIn 0.2s ease 0.06s both" }}>
+            <TypewriterLine text="──────────────────────────────" speed={8} delay={80} />
+          </div>
+
+          {/* Each row: label types left→right, then detail continues left→right */}
+          {p.subitems.map((sub, i) => (
+            <TerminalSubItem
+              key={sub.label}
+              sub={sub}
+              color={p.accent}
+              staggerDelay={i * STAGGER + 180}
+              labelSpeed={LABEL_SPEED}
+              detailSpeed={DETAIL_SPEED}
+              onDone={handleRowDone}
+            />
+          ))}
+
+          {/* Trailing prompt — appears only once all labels have finished */}
+          <div style={{
+            fontSize: "9px", color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.38)`,
+            marginTop: "4px",
+            opacity: allDone ? 1 : 0,
+            transform: allDone ? "none" : "translateX(-6px)",
+            transition: "opacity 0.22s ease, transform 0.28s ease",
+          }}>
+            $<span style={{ opacity: blink ? 1 : 0, transition: "opacity 0.05s", marginLeft: "4px" }}>▮</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -466,1067 +404,138 @@ function WorkModal({ entry, onClose, closing }) {
 export default function Portfolio() {
   const [expanded, setExpanded] = useState(null);
   const [hovered, setHovered] = useState(null);
-  const [cursor, setCursor] = useState({ x: -100, y: -100 });
-  const [cursorVisible, setCursorVisible] = useState(false);
-  const [entered, setEntered] = useState(false);
-  const [isMobile, setIsMobile] = useState(() =>
-    typeof window !== "undefined" && window.innerWidth <= 768
-  );
-  const [detailed, setDetailed] = useState(null);
-  const [detailClosing, setDetailClosing] = useState(false);
-  const detailCloseTimer = useRef(null);
-  const [workModal, setWorkModal] = useState(null);
-  const [workModalClosing, setWorkModalClosing] = useState(false);
-  const workModalCloseTimer = useRef(null);
+  const [blink, setBlink] = useState(true);
 
-  const active = experiences.find((p) => p.id === expanded);
-  const activeHovered = experiences.find((p) => p.id === hovered);
-
-  const handleDetailClose = () => {
-    if (detailCloseTimer.current) clearTimeout(detailCloseTimer.current);
-    setDetailClosing(true);
-    detailCloseTimer.current = setTimeout(() => {
-      setDetailed(null);
-      setDetailClosing(false);
-    }, 350);
-  };
-
-  const handleWorkModalClose = () => {
-    if (workModalCloseTimer.current) clearTimeout(workModalCloseTimer.current);
-    setWorkModalClosing(true);
-    workModalCloseTimer.current = setTimeout(() => {
-      setWorkModal(null);
-      setWorkModalClosing(false);
-    }, 400);
-  };
+  const hovEntry = experiences.find((p) => p.id === hovered);
+  const bgColor = hovEntry ? hovEntry.bg : "#060808";
 
   useEffect(() => {
-    const t = setTimeout(() => setEntered(true), 80);
-    return () => clearTimeout(t);
+    const interval = setInterval(() => setBlink((b) => !b), 530);
+    return () => clearInterval(interval);
   }, []);
-
-  useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth <= 768);
-    window.addEventListener("resize", check);
-    return () => window.removeEventListener("resize", check);
-  }, []);
-
-  useEffect(() => {
-    const move = (e) => setCursor({ x: e.clientX, y: e.clientY });
-    const show = () => setCursorVisible(true);
-    const hide = () => setCursorVisible(false);
-    window.addEventListener("mousemove", move);
-    document.addEventListener("mouseenter", show);
-    document.addEventListener("mouseleave", hide);
-    return () => {
-      window.removeEventListener("mousemove", move);
-      document.removeEventListener("mouseenter", show);
-      document.removeEventListener("mouseleave", hide);
-    };
-  }, []);
-
-  // Esc key dismisses overlays
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.key === "Escape") {
-        if (workModal) handleWorkModalClose();
-        else if (detailed) handleDetailClose();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [detailed, workModal]);
-
-  // Scroll lock while any overlay is open
-  useEffect(() => {
-    document.body.style.overflow = (detailed || workModal) ? "hidden" : "";
-    return () => { document.body.style.overflow = ""; };
-  }, [detailed, workModal]);
-
-  const bgColor = active ? active.bg : "#0c0c0c";
-  const accentColor = (activeHovered ?? active)?.accent ?? "#f0ede6";
 
   return (
     <div style={{
       minHeight: "100vh",
       backgroundColor: bgColor,
-      transition: "background-color 0.65s cubic-bezier(0.16, 1, 0.3, 1)",
+      transition: "background-color 0.65s cubic-bezier(0.16,1,0.3,1)",
       fontFamily: "'DM Mono', monospace",
-      cursor: isMobile ? "default" : "none",
-      overflowX: "hidden",
       position: "relative",
+      overflowX: "hidden",
     }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&family=Cormorant+Garamond:ital,wght@0,300;1,300;1,600&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
         body { margin: 0; }
-
-        .pr {
-          border-top: 1px solid rgba(240,237,230,0.07);
-          cursor: none;
-          position: relative;
-          opacity: 1;
-          transition: opacity 0.35s ease;
+        .mc-entry {
+          border-top: 1px solid rgba(240,237,230,0.05);
+          cursor: pointer;
         }
-        .pr:last-child { border-bottom: 1px solid rgba(240,237,230,0.07); }
-
-        .list-hovering .pr:not(.pr-hov) { opacity: 0.35; }
-
-        .pr-main {
-          display: flex;
-          align-items: flex-start;
-          gap: 12px;
-          padding: 18px 0;
-        }
-
-        .pnum {
-          font-size: 10px;
-          color: rgba(240,237,230,0.2);
-          width: 36px;
-          flex-shrink: 0;
-          letter-spacing: 0.06em;
-          transition: color 0.35s ease;
-          font-family: 'DM Mono', monospace;
-          font-weight: 300;
-          align-self: center;
-        }
-
-        .ptitle-group {
-          flex: 1;
-          display: flex;
-          flex-direction: column;
-          gap: 8px;
-        }
-
-        .ptitle {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: clamp(38px, 5.8vw, 76px);
-          font-weight: 300;
-          font-style: italic;
-          color: rgba(240,237,230,0.82);
-          letter-spacing: -0.025em;
-          line-height: 1;
-          transition: color 0.3s ease, transform 0.45s cubic-bezier(0.16,1,0.3,1), text-shadow 0.45s ease;
-          transform-origin: left center;
-        }
-        .pr:hover .ptitle { transform: translateX(10px); }
-
-        .pmeta {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-end;
-          gap: 5px;
-          min-width: 280px;
-        }
-
-        .pyear {
-          font-size: 9px;
-          color: rgba(240,237,230,0.18);
-          letter-spacing: 0.1em;
-          font-family: 'DM Mono', monospace;
-        }
-
-        .ptags { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-start; }
-        .ptag {
-          font-size: 9px;
-          letter-spacing: 0.13em;
-          color: rgba(240,237,230,0.18);
-          text-transform: uppercase;
-          font-family: 'DM Mono', monospace;
-          transition: color 0.3s ease;
-        }
-
-        .pdesc {
-          font-size: 10px;
-          font-family: 'DM Mono', monospace;
-          font-weight: 300;
-          color: rgba(240,237,230,0);
-          line-height: 1.75;
-          text-align: right;
-          max-width: 280px;
-          transition: color 0.45s ease;
-        }
-        .pdesc.vis { color: rgba(240,237,230,0.5); }
-
-        .subitems-wrap {
-          max-height: 0;
-          overflow: hidden;
-          transition: max-height 0.55s cubic-bezier(0.16,1,0.3,1), padding-bottom 0.4s ease;
-          padding-left: 48px;
-          padding-bottom: 0;
-        }
-        .subitems-wrap.open {
-          max-height: 600px;
-          padding-bottom: 24px;
-        }
-
-        .subitems-inner {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-        }
-
-        .detail-trigger {
-          font-family: 'DM Mono', monospace;
-          font-size: 9px;
-          letter-spacing: 0.16em;
-          text-transform: uppercase;
-          background: none;
-          border: none;
-          padding: 0;
-          margin-top: 20px;
-          cursor: none;
-          display: block;
-          transition: color 0.2s ease, opacity 0.4s ease;
-        }
-        .detail-trigger:hover { opacity: 1 !important; }
-
-        @keyframes fadeUp {
-          from { opacity: 0; transform: translateY(30px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .entered .pr { animation: fadeUp 0.75s cubic-bezier(0.16,1,0.3,1) both; }
-        .entered .pr:nth-child(1) { animation-delay: 0.12s; }
-        .entered .pr:nth-child(2) { animation-delay: 0.26s; }
-        .entered .pr:nth-child(3) { animation-delay: 0.40s; }
-
-        @keyframes hIn {
-          from { opacity: 0; transform: translateY(-14px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .hin { animation: hIn 0.9s cubic-bezier(0.16,1,0.3,1) 0.04s both; }
-
-        @keyframes fIn { from { opacity: 0; } to { opacity: 1; } }
-        .fin { animation: fIn 1s ease 0.85s both; }
-
-        .pchevron {
-          display: flex;
-          align-items: center;
-          font-size: 14px;
-          color: rgba(240,237,230,0.18);
-          transition: transform 0.4s cubic-bezier(0.16,1,0.3,1), color 0.3s ease;
-          flex-shrink: 0;
-          align-self: center;
-          padding: 0 2px;
-          font-style: normal;
-        }
-        .pchevron.open { transform: rotate(90deg); }
-
-        /* ── Detail Overlay ── */
-        @keyframes detailIn {
-          from { opacity: 0; }
-          to   { opacity: 1; }
-        }
-        @keyframes detailOut {
-          from { opacity: 1; }
-          to   { opacity: 0; }
-        }
-        @keyframes detailUp {
-          from { opacity: 0; transform: translateY(40px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-
-        .detail-overlay {
-          position: fixed;
-          inset: 0;
-          z-index: 100;
-          overflow-y: auto;
-          overflow-x: hidden;
-          animation: detailIn 0.5s cubic-bezier(0.16,1,0.3,1) both;
-        }
-        .detail-overlay.closing {
-          animation: detailOut 0.35s cubic-bezier(0.16,1,0.3,1) both;
-        }
-
-        .detail-canvas-wrap {
-          position: fixed;
-          inset: 0;
-          opacity: 0.45;
-          pointer-events: none;
-          z-index: 0;
-        }
-
-        .detail-gradient {
-          position: fixed;
-          inset: 0;
-          background: linear-gradient(to bottom, transparent 0%, rgba(8,8,8,0.5) 40%, rgba(8,8,8,0.92) 80%);
-          pointer-events: none;
-          z-index: 1;
-        }
-
-        .detail-grain {
-          position: fixed;
-          inset: 0;
-          pointer-events: none;
-          z-index: 2;
-          opacity: 0.035;
-          background-image: ${GRAIN_URL};
-          background-size: 180px 180px;
-        }
-
-        .detail-close {
-          position: fixed;
-          top: 40px;
-          right: 48px;
-          z-index: 200;
-          font-family: 'DM Mono', monospace;
-          font-size: 20px;
-          color: rgba(240,237,230,0.3);
-          background: none;
-          border: none;
-          cursor: none;
-          padding: 8px;
-          line-height: 1;
-          transition: color 0.2s ease;
-        }
-        .detail-close:hover { color: rgba(240,237,230,0.9); }
-
-        .detail-content {
-          position: relative;
-          z-index: 10;
-          max-width: 1100px;
-          margin: 0 auto;
-          padding: 120px 48px 100px;
-        }
-
-        .detail-eyebrow {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          font-family: 'DM Mono', monospace;
-          font-size: 9px;
-          letter-spacing: 0.16em;
-          color: rgba(240,237,230,0.2);
-          text-transform: uppercase;
-          margin-bottom: 24px;
-          animation: detailUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.10s both;
-        }
-
-        .detail-title {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: clamp(64px, 10vw, 130px);
-          font-weight: 300;
-          font-style: italic;
-          letter-spacing: -0.03em;
-          line-height: 0.95;
-          margin-bottom: 20px;
-          animation: detailUp 0.8s cubic-bezier(0.16,1,0.3,1) 0.18s both;
-        }
-
-        .detail-tags {
-          display: flex;
-          gap: 16px;
-          flex-wrap: wrap;
-          margin-bottom: 60px;
-          animation: detailUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.26s both;
-        }
-
-        .detail-tag {
-          font-family: 'DM Mono', monospace;
-          font-size: 9px;
-          letter-spacing: 0.14em;
-          text-transform: uppercase;
-        }
-
-        .detail-headline {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: clamp(22px, 3vw, 36px);
-          font-weight: 300;
-          font-style: italic;
-          color: rgba(240,237,230,0.75);
-          line-height: 1.3;
-          max-width: 680px;
-          margin-bottom: 32px;
-          animation: detailUp 0.8s cubic-bezier(0.16,1,0.3,1) 0.32s both;
-        }
-
-        .detail-body {
-          font-family: 'DM Mono', monospace;
-          font-size: 10px;
-          font-weight: 300;
-          color: rgba(240,237,230,0.45);
-          line-height: 2;
-          max-width: 620px;
-          margin-bottom: 64px;
-          white-space: pre-line;
-          animation: detailUp 0.8s cubic-bezier(0.16,1,0.3,1) 0.38s both;
-        }
-
-        .detail-stats {
-          display: flex;
-          gap: 48px;
-          flex-wrap: wrap;
-          margin-bottom: 56px;
-          animation: detailUp 0.8s cubic-bezier(0.16,1,0.3,1) 0.44s both;
-        }
-
-        .detail-stat-value {
-          display: block;
-          font-family: 'Cormorant Garamond', serif;
-          font-size: clamp(36px, 5vw, 56px);
-          font-weight: 300;
-          font-style: italic;
-          line-height: 1;
-          letter-spacing: -0.02em;
-        }
-
-        .detail-stat-label {
-          display: block;
-          font-family: 'DM Mono', monospace;
-          font-size: 8px;
-          letter-spacing: 0.14em;
-          text-transform: uppercase;
-          color: rgba(240,237,230,0.22);
-          margin-top: 6px;
-        }
-
-        .detail-rule {
-          height: 1px;
-          margin-bottom: 40px;
-          animation: detailUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.48s both;
-        }
-
-        .detail-subitems {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 20px 48px;
-          margin-bottom: 56px;
-          animation: detailUp 0.8s cubic-bezier(0.16,1,0.3,1) 0.52s both;
-        }
-
-        .detail-link {
-          display: inline-block;
-          font-family: 'DM Mono', monospace;
-          font-size: 9px;
-          letter-spacing: 0.16em;
-          text-transform: uppercase;
-          text-decoration: none;
-          transition: color 0.2s ease;
-          animation: detailUp 0.7s cubic-bezier(0.16,1,0.3,1) 0.58s both;
-        }
-
-        /* ── Work Modal ── */
-        @keyframes wmSlideIn {
-          from { opacity: 0; transform: translateX(60px); }
-          to   { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes wmSlideOut {
-          from { opacity: 1; transform: translateX(0); }
-          to   { opacity: 0; transform: translateX(60px); }
-        }
-        @keyframes wmImgIn {
-          from { opacity: 0; transform: translateY(24px) scale(0.97); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
-        }
-        @keyframes wmTextIn {
-          from { opacity: 0; transform: translateY(18px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-
-        .wm-overlay {
-          position: fixed;
-          inset: 0;
-          z-index: 200;
-          display: flex;
-          justify-content: flex-end;
-        }
-        .wm-backdrop {
-          position: absolute;
-          inset: 0;
-          background: rgba(6,6,6,0.72);
-          backdrop-filter: blur(6px);
-          -webkit-backdrop-filter: blur(6px);
-          animation: detailIn 0.3s ease both;
-        }
-        .wm-closing .wm-backdrop {
-          animation: detailOut 0.4s ease both;
-        }
-        .wm-panel {
-          position: relative;
-          width: 78%;
-          max-width: 1080px;
-          height: 100%;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          animation: wmSlideIn 0.55s cubic-bezier(0.16,1,0.3,1) both;
-          box-shadow: -32px 0 80px rgba(0,0,0,0.6);
-        }
-        .wm-closing .wm-panel {
-          animation: wmSlideOut 0.4s cubic-bezier(0.16,1,0.3,1) both;
-        }
-        .wm-close {
-          position: absolute;
-          top: 32px;
-          right: 36px;
-          z-index: 10;
-          font-family: 'DM Mono', monospace;
-          font-size: 22px;
-          background: none;
-          border: none;
-          cursor: none;
-          padding: 8px;
-          line-height: 1;
-          transition: color 0.2s ease;
-        }
-        .wm-close:hover { color: rgba(240,237,230,0.9) !important; }
-        .wm-eyebrow {
-          flex-shrink: 0;
+        .mc-entry:last-of-type { border-bottom: 1px solid rgba(240,237,230,0.05); }
+        .mc-row {
           display: flex;
           align-items: baseline;
-          gap: 16px;
-          padding: 36px 48px 0;
-          animation: wmTextIn 0.6s cubic-bezier(0.16,1,0.3,1) 0.1s both;
+          gap: 18px;
+          padding: 26px 0;
+          transition: padding-left 0.3s cubic-bezier(0.16,1,0.3,1);
         }
-        .wm-eyebrow-num {
+        .mc-entry:hover .mc-row { padding-left: 10px; }
+        .mc-title {
           font-family: 'Cormorant Garamond', serif;
-          font-size: 11px;
           font-style: italic;
-          letter-spacing: 0.08em;
+          font-weight: 300;
+          font-size: clamp(38px, 5.2vw, 70px);
+          letter-spacing: -0.025em;
+          line-height: 1;
+          transition: color 0.25s ease;
         }
-        .wm-eyebrow-title {
-          font-family: 'DM Mono', monospace;
-          font-size: 9px;
-          letter-spacing: 0.18em;
-          text-transform: uppercase;
-          color: rgba(240,237,230,0.18);
-        }
-        .wm-eyebrow-year {
-          font-family: 'DM Mono', monospace;
-          font-size: 9px;
-          letter-spacing: 0.1em;
-          color: rgba(240,237,230,0.12);
-          margin-left: auto;
-          margin-right: 64px;
-        }
-        .wm-body {
-          flex: 1;
-          display: flex;
-          min-height: 0;
-          margin-top: 28px;
-          overflow: hidden;
-        }
-        /* LEFT: image column */
-        .wm-images {
-          width: 45%;
-          flex-shrink: 0;
-          overflow-y: auto;
-          overflow-x: hidden;
-          padding: 0 0 60px 48px;
+        .mc-sub {
+          border-left: 1px solid rgba(240,237,230,0.07);
+          margin-left: 46px;
+          padding-left: 24px;
+          padding-bottom: 28px;
           display: flex;
           flex-direction: column;
-          scrollbar-width: none;
-        }
-        .wm-images::-webkit-scrollbar { display: none; }
-        .wm-img-wrap {
-          position: relative;
-          width: 100%;
-          margin-bottom: -28px;
-          animation: wmImgIn 0.7s cubic-bezier(0.16,1,0.3,1) both;
-        }
-        .wm-img {
-          width: 100%;
-          display: block;
-          object-fit: cover;
-        }
-        .wm-img-wrap:nth-child(1) .wm-img { aspect-ratio: 4/3; }
-        .wm-img-wrap:nth-child(2) .wm-img { aspect-ratio: 16/9; }
-        .wm-img-wrap:nth-child(3) .wm-img { aspect-ratio: 3/4; }
-        .wm-img-fallback {
-          display: none;
-          width: 100%;
-          aspect-ratio: 4/3;
-          align-items: center;
-          justify-content: center;
-        }
-        .wm-img-caption {
-          position: absolute;
-          bottom: 36px;
-          left: 0;
-          right: 0;
-          padding: 8px 12px;
-          clip-path: polygon(0 8px, 100% 0, 100% 100%, 0 100%);
-          background: rgba(6,6,6,0.65);
-          backdrop-filter: blur(4px);
-          -webkit-backdrop-filter: blur(4px);
-        }
-        .wm-img-caption span {
-          font-family: 'DM Mono', monospace;
-          font-size: 8px;
-          letter-spacing: 0.12em;
-          line-height: 1.6;
-        }
-        /* RIGHT: text column */
-        .wm-text {
-          flex: 1;
-          overflow-y: auto;
-          overflow-x: hidden;
-          padding: 0 48px 80px 36px;
-          position: relative;
-          scrollbar-width: none;
-        }
-        .wm-text::-webkit-scrollbar { display: none; }
-        .wm-ghost-num {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: clamp(100px, 18vw, 200px);
-          font-weight: 600;
-          font-style: italic;
-          line-height: 0.85;
-          letter-spacing: -0.04em;
-          position: absolute;
-          top: -20px;
-          right: 32px;
-          pointer-events: none;
-          user-select: none;
-          animation: wmTextIn 0.8s cubic-bezier(0.16,1,0.3,1) 0.08s both;
-        }
-        .wm-headline {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: clamp(40px, 5.5vw, 78px);
-          font-weight: 300;
-          font-style: italic;
-          line-height: 0.95;
-          letter-spacing: -0.03em;
-          margin-bottom: 14px;
-          position: relative;
-          z-index: 1;
-          animation: wmTextIn 0.7s cubic-bezier(0.16,1,0.3,1) 0.16s both;
-        }
-        .wm-tags {
-          display: flex;
           gap: 14px;
-          flex-wrap: wrap;
-          margin-bottom: 28px;
-          animation: wmTextIn 0.6s cubic-bezier(0.16,1,0.3,1) 0.22s both;
         }
-        .wm-tag {
-          font-family: 'DM Mono', monospace;
-          font-size: 9px;
-          letter-spacing: 0.14em;
-          text-transform: uppercase;
+        @keyframes mcIn {
+          from { opacity: 0; transform: translateX(-10px); }
+          to { opacity: 1; transform: translateX(0); }
         }
-        .wm-pullquote {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: clamp(15px, 2vw, 21px);
-          font-weight: 300;
-          font-style: italic;
-          color: rgba(240,237,230,0.65);
-          line-height: 1.45;
-          border-left: 2px solid;
-          padding-left: 16px;
-          margin: 0 0 22px;
-          animation: wmTextIn 0.7s cubic-bezier(0.16,1,0.3,1) 0.28s both;
-        }
-        .wm-worknote {
-          font-family: 'DM Mono', monospace;
-          font-size: 10px;
-          font-weight: 400;
-          color: rgba(240,237,230,0.55);
-          line-height: 1.8;
-          margin-bottom: 28px;
-          animation: wmTextIn 0.7s cubic-bezier(0.16,1,0.3,1) 0.32s both;
-        }
-        .wm-rule {
-          height: 2px;
-          width: 100%;
-          margin-bottom: 28px;
-          transform: skewX(-12deg);
-          transform-origin: left center;
-          animation: wmTextIn 0.6s cubic-bezier(0.16,1,0.3,1) 0.36s both;
-        }
-        .wm-stats {
-          display: flex;
-          gap: 28px;
-          flex-wrap: wrap;
-          margin-bottom: 36px;
-          animation: wmTextIn 0.7s cubic-bezier(0.16,1,0.3,1) 0.40s both;
-        }
-        .wm-stat { display: flex; flex-direction: column; gap: 4px; }
-        .wm-stat-value {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: clamp(30px, 4vw, 48px);
-          font-weight: 300;
-          font-style: italic;
-          line-height: 1;
-          letter-spacing: -0.02em;
-        }
-        .wm-stat-label {
-          font-family: 'DM Mono', monospace;
-          font-size: 8px;
-          letter-spacing: 0.14em;
-          text-transform: uppercase;
-          color: rgba(240,237,230,0.22);
-        }
-        .wm-body-text {
-          font-family: 'DM Mono', monospace;
-          font-size: 10px;
-          font-weight: 300;
-          color: rgba(240,237,230,0.38);
-          line-height: 2;
-          white-space: pre-line;
-          margin-bottom: 36px;
-          animation: wmTextIn 0.8s cubic-bezier(0.16,1,0.3,1) 0.44s both;
-        }
-        .wm-link {
-          display: inline-block;
-          font-family: 'DM Mono', monospace;
-          font-size: 9px;
-          letter-spacing: 0.16em;
-          text-transform: uppercase;
-          text-decoration: none;
-          transition: color 0.2s ease;
-          animation: wmTextIn 0.6s cubic-bezier(0.16,1,0.3,1) 0.50s both;
-        }
-
-        /* ── Mobile ── */
         @media (max-width: 768px) {
-          .site-wrap { padding: 0 20px !important; }
-
-          .site-header {
-            flex-direction: column !important;
-            gap: 16px;
-            padding-top: 28px !important;
-            padding-bottom: 48px !important;
-          }
-
-          .site-nav { display: none; }
-
-          .pr {
-            cursor: pointer;
-            touch-action: manipulation;
-          }
-
-          .pr-main {
+          .mc-row {
             flex-wrap: wrap;
             align-items: flex-start;
-            gap: 2px;
+            gap: 10px;
             padding: 20px 0;
           }
-
-          .ptitle { font-size: clamp(28px, 9vw, 52px) !important; }
-
-          .pr:hover .ptitle { transform: none; }
-
-          .pmeta {
-            width: 100%;
-            min-width: unset !important;
-            align-items: flex-start !important;
-            padding-top: 6px;
-          }
-
-          .pdesc {
-            text-align: left !important;
-            max-width: 100% !important;
-          }
-
-          .subitems-wrap { padding-left: 0 !important; }
-
-          .detail-close {
-            top: 20px;
-            right: 20px;
-            cursor: pointer;
-          }
-
-          .detail-content {
-            padding: 80px 20px 60px;
-          }
-
-          .detail-subitems {
-            grid-template-columns: 1fr;
-          }
-
-          .detail-canvas-wrap {
-            opacity: 0.3;
-          }
-
-          .detail-trigger {
-            cursor: pointer;
-          }
-
-          .site-footer {
-            flex-direction: column !important;
-            gap: 16px;
-            align-items: flex-start !important;
-            padding-top: 40px !important;
-            padding-bottom: 36px !important;
-          }
-        }
-
-        /* ── Work Modal Mobile ── */
-        @media (max-width: 768px) {
-          .wm-panel { width: 100%; max-width: 100%; }
-          .wm-eyebrow { padding: 24px 20px 0; }
-          .wm-eyebrow-year { margin-right: 52px; }
-          .wm-body {
-            flex-direction: column;
-            overflow-y: auto;
-            overflow-x: hidden;
-          }
-          .wm-images {
-            width: 100%;
-            flex-direction: row;
-            overflow-x: auto;
-            overflow-y: hidden;
-            padding: 16px 20px;
-            flex-shrink: 0;
-          }
-          .wm-img-wrap {
-            flex-shrink: 0;
-            width: 72vw;
-            margin-bottom: 0;
-            animation-delay: 0s !important;
-          }
-          .wm-img-wrap .wm-img,
-          .wm-img-wrap:nth-child(1) .wm-img,
-          .wm-img-wrap:nth-child(2) .wm-img,
-          .wm-img-wrap:nth-child(3) .wm-img { aspect-ratio: 4/3; }
-          .wm-text {
-            overflow-y: visible;
-            overflow-x: hidden;
-            padding: 16px 20px 80px;
-          }
-          .wm-ghost-num { font-size: clamp(70px, 24vw, 110px); right: 12px; }
-          .wm-headline { font-size: clamp(34px, 9vw, 56px); }
-          .wm-close { top: 16px; right: 16px; cursor: pointer; }
-          .wm-link { cursor: pointer; }
-        }
-
-        /* Hide custom cursor on touch devices */
-        @media (pointer: coarse) {
-          .custom-cursor { display: none !important; }
-          * { cursor: default !important; }
-          .detail-close, .detail-trigger, .wm-close, .wm-link { cursor: pointer !important; }
+          .mc-title { font-size: clamp(30px, 9vw, 52px) !important; }
+          .mc-entry:hover .mc-row { padding-left: 0; }
+          .mc-sub { margin-left: 0; padding-left: 16px; }
         }
       `}</style>
 
-      {/* Custom cursor */}
-      <div className="custom-cursor" style={{
-        position: "fixed",
-        left: cursor.x,
-        top: cursor.y,
-        pointerEvents: "none",
-        zIndex: 9999,
-        mixBlendMode: "difference",
-        transform: `translate(-50%, -50%) scale(${hovered && !detailed ? 2.2 : 1})`,
-        transition: "transform 0.18s ease, opacity 0.2s ease",
-        opacity: cursorVisible ? 1 : 0,
-      }}>
-        <svg width="18" height="18" viewBox="0 0 18 18">
-          <circle cx="9" cy="9" r="3.5" fill={accentColor} />
-        </svg>
+      {/* Background canvas — very subtle, just a hint */}
+      <div style={{ position: "fixed", inset: 0, opacity: hovEntry ? 0.11 : 0, transition: "opacity 0.6s ease", pointerEvents: "none", zIndex: 0 }}>
+        {hovEntry && <ProjectVisual visual={hovEntry.visual} color={hovEntry.accent} />}
       </div>
+      <div style={{ position: "fixed", inset: 0, backgroundImage: GRAIN_URL, backgroundSize: "180px", opacity: 0.04, zIndex: 1, pointerEvents: "none" }} />
 
-      {/* Background canvas visual */}
-      <div style={{
-        position: "fixed",
-        inset: 0,
-        opacity: expanded ? 0.22 : (hovered ? 0.08 : 0),
-        transition: "opacity 0.7s ease",
-        pointerEvents: "none",
-        zIndex: 0,
-      }}>
-        {(active || activeHovered) && (
-          <ProjectVisual
-            visual={(active ?? activeHovered).visual}
-            color={(active ?? activeHovered).accent}
-          />
-        )}
-      </div>
+      <div style={{ position: "relative", zIndex: 2, maxWidth: "880px", margin: "0 auto", padding: "0 48px" }}>
 
-      {/* Grain overlay */}
-      <div style={{
-        position: "fixed", inset: 0, pointerEvents: "none", zIndex: 1, opacity: 0.035,
-        backgroundImage: GRAIN_URL,
-        backgroundSize: "180px 180px",
-      }} />
-
-      {/* Page content */}
-      <div className="site-wrap" style={{
-        position: "relative", zIndex: 2,
-        maxWidth: "1100px", margin: "0 auto", padding: "0 48px",
-      }}>
-        {/* Header */}
-        <header className="site-header hin" style={{
-          display: "flex", justifyContent: "space-between", alignItems: "flex-start",
-          paddingTop: "48px", paddingBottom: "88px",
-        }}>
-          <div>
-            <div style={{
-              fontFamily: "'Cormorant Garamond', serif",
-              fontSize: "22px", fontWeight: 300,
-              color: "rgba(240,237,230,0.88)",
-            }}>Gordon Tsui</div>
-            <div style={{
-              fontSize: "9px", color: "rgba(240,237,230,0.22)",
-              letterSpacing: "0.16em", textTransform: "uppercase", marginTop: "5px",
-              fontFamily: "'DM Mono', monospace",
-            }}>Software Engineer &amp; Technical Leader</div>
+        {/* Terminal header */}
+        <div style={{ paddingTop: "72px", paddingBottom: "52px" }}>
+          {/* Prompt */}
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "24px" }}>
+            <span style={{ fontSize: "10px", color: "rgba(240,237,230,0.18)" }}>gordon@tsui</span>
+            <span style={{ fontSize: "10px", color: "rgba(240,237,230,0.08)" }}>:</span>
+            <span style={{ fontSize: "10px", color: hovEntry ? hovEntry.accent : "rgba(240,237,230,0.32)", transition: "color 0.4s ease" }}>~/experience</span>
+            <span style={{ fontSize: "10px", color: "rgba(240,237,230,0.14)" }}>$</span>
+            <span style={{ fontSize: "10px", color: "rgba(240,237,230,0.45)" }}>ls</span>
           </div>
-          <nav className="site-nav" style={{ display: "flex", gap: "32px", paddingTop: "4px" }}>
-            {["About", "Contact"].map((item) => (
-              <span key={item} style={{
-                fontSize: "9px", letterSpacing: "0.13em", textTransform: "uppercase",
-                color: "rgba(240,237,230,0.28)", cursor: "none",
-                fontFamily: "'DM Mono', monospace",
-              }}>{item}</span>
-            ))}
-          </nav>
-        </header>
 
-        {/* Experience list */}
-        <main className={`${entered ? "entered" : ""} ${hovered ? "list-hovering" : ""}`}>
-          {experiences.map((p) => {
-            const isOpen = expanded === p.id;
-            const rgb = hexRgb(p.accent);
-            const triggerDelay = 0.08 + p.subitems.length * 0.07 + 0.15;
-            return (
-              <div
-                key={p.id}
-                className={`pr${hovered === p.id ? " pr-hov" : ""}`}
-                onMouseEnter={!isMobile ? () => setHovered(p.id) : undefined}
-                onMouseLeave={!isMobile ? () => setHovered(null) : undefined}
-                onClick={() => setExpanded(expanded === p.id ? null : p.id)}
-              >
-                {/* Main row */}
-                <div className="pr-main">
-                  <span className="pnum" style={{ color: isOpen ? p.accent : undefined }}>{p.num}</span>
-                  <div className="ptitle-group">
-                    <ScrambleTitle
-                      className="ptitle"
-                      text={p.title}
-                      active={hovered === p.id}
-                      style={{
-                        color: isOpen ? p.accent : undefined,
-                        textShadow: hovered === p.id
-                          ? `0 0 24px rgba(${rgb.r},${rgb.g},${rgb.b},0.38), 0 0 64px rgba(${rgb.r},${rgb.g},${rgb.b},0.12)`
-                          : `0 0 0px rgba(${rgb.r},${rgb.g},${rgb.b},0)`,
-                      }}
-                    />
-                    <div className="ptags">
-                      {p.tags.map((tag) => (
-                        <span key={tag} className="ptag" style={{
-                          color: isOpen ? `rgba(${rgb.r},${rgb.g},${rgb.b},0.65)` : undefined,
-                        }}>{tag}</span>
-                      ))}
-                    </div>
-                  </div>
-                  <span
-                    className={`pchevron${isOpen ? " open" : ""}`}
-                    style={{ color: isOpen ? `rgba(${rgb.r},${rgb.g},${rgb.b},0.5)` : undefined }}
-                    aria-hidden="true"
-                  >›</span>
-                  <div className="pmeta">
-                    <span className="pyear">{p.year}</span>
-                    <p className={`pdesc${isOpen ? " vis" : ""}`}>{p.desc}</p>
-                  </div>
-                </div>
+          {/* Large name — Cormorant as deliberate contrast */}
+          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(56px, 8.5vw, 104px)", fontStyle: "italic", fontWeight: 300, color: hovEntry ? hovEntry.accent : "rgba(240,237,230,0.88)", lineHeight: 0.95, letterSpacing: "-0.03em", transition: "color 0.55s ease" }}>
+            Gordon Tsui
+          </div>
+          <div style={{ marginTop: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
+            <span style={{ fontSize: "8px", color: "rgba(240,237,230,0.16)", letterSpacing: "0.2em", textTransform: "uppercase" }}>Software Engineer · Vancouver, BC</span>
+            <span style={{ opacity: blink ? 1 : 0, color: "rgba(240,237,230,0.4)", fontSize: "12px", transition: "opacity 0.05s", lineHeight: 1 }}>▮</span>
+          </div>
+        </div>
 
-                {/* Expandable sub-items + full story trigger */}
-                {p.subitems && (
-                  <div className={`subitems-wrap${isOpen ? " open" : ""}`}>
-                    <div className="subitems-inner">
-                      {p.subitems.map((sub, i) => (
-                        <SubItem
-                          key={sub.label}
-                          item={sub}
-                          color={p.accent}
-                          index={i}
-                          visible={isOpen}
-                        />
-                      ))}
-                    </div>
-                    {/* Triggers — appear after subitems settle */}
-                    <div style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "20px",
-                      marginTop: "20px",
-                      opacity: isOpen ? 1 : 0,
-                      transition: `opacity 0.4s ease ${isOpen ? triggerDelay : 0}s`,
-                      pointerEvents: isOpen ? "auto" : "none",
-                    }}>
-                      <button
-                        className="detail-trigger"
-                        style={{
-                          color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.4)`,
-                          marginTop: 0,
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setHovered(null);
-                          setDetailed(p.id);
-                        }}
-                      >
-                        full story →
-                      </button>
-                      <span style={{
-                        width: "1px", height: "10px",
-                        background: `rgba(${rgb.r},${rgb.g},${rgb.b},0.18)`,
-                        flexShrink: 0,
-                      }} />
-                      <button
-                        className="detail-trigger"
-                        style={{
-                          color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.75)`,
-                          marginTop: 0,
-                          fontWeight: 400,
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setWorkModal(p.id);
-                        }}
-                      >
-                        view work →
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </main>
+        {/* Command line before list */}
+        <div style={{ fontSize: "9px", color: "rgba(240,237,230,0.1)", letterSpacing: "0.1em", marginBottom: "6px" }}>$ cat experience/*</div>
+
+        {/* Entries */}
+        <div>
+          {experiences.map((p) => (
+            <TerminalEntry
+              key={p.id}
+              p={p}
+              isOpen={expanded === p.id}
+              onToggle={() => setExpanded(expanded === p.id ? null : p.id)}
+              isHovered={hovered === p.id}
+              onHoverEnter={() => setHovered(p.id)}
+              onHoverLeave={() => setHovered(null)}
+              blink={blink}
+            />
+          ))}
+        </div>
 
         {/* Footer */}
-        <footer className="site-footer fin" style={{
-          display: "flex", justifyContent: "space-between", alignItems: "center",
-          paddingTop: "64px", paddingBottom: "48px",
-          borderTop: "1px solid rgba(240,237,230,0.05)", marginTop: "12px",
-        }}>
-          <span style={{
-            fontSize: "9px", color: "rgba(240,237,230,0.15)",
-            letterSpacing: "0.1em", fontFamily: "'DM Mono', monospace",
-          }}>
-            {new Date().getFullYear()} — Vancouver, BC
-          </span>
-          <div style={{ display: "flex", gap: "24px" }}>
-            {["GitHub", "LinkedIn", "Email"].map((l) => (
-              <span key={l} style={{
-                fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase",
-                color: "rgba(240,237,230,0.2)",
-                fontFamily: "'DM Mono', monospace",
-              }}>{l}</span>
-            ))}
+        <footer style={{ paddingTop: "64px", paddingBottom: "52px", borderTop: "1px solid rgba(240,237,230,0.05)", marginTop: "12px" }}>
+          <div style={{ fontSize: "9px", color: "rgba(240,237,230,0.09)", letterSpacing: "0.08em", marginBottom: "16px" }}>$ echo $CONTACT</div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: "9px", color: "rgba(240,237,230,0.1)", letterSpacing: "0.1em" }}>{new Date().getFullYear()} — Vancouver, BC</span>
+            <div style={{ display: "flex", gap: "24px" }}>
+              {["GitHub", "LinkedIn", "Email"].map((l) => (
+                <span key={l} style={{ fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(240,237,230,0.16)" }}>{l}</span>
+              ))}
+            </div>
           </div>
         </footer>
       </div>
-
-      {/* Detail view overlay */}
-      {detailed && (
-        <DetailView
-          entry={experiences.find((p) => p.id === detailed)}
-          onClose={handleDetailClose}
-          closing={detailClosing}
-        />
-      )}
-
-      {/* Work modal */}
-      {workModal && (
-        <WorkModal
-          entry={experiences.find((p) => p.id === workModal)}
-          onClose={handleWorkModalClose}
-          closing={workModalClosing}
-        />
-      )}
     </div>
   );
 }

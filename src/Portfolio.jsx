@@ -559,6 +559,7 @@ export default function Portfolio() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&family=Cormorant+Garamond:ital,wght@0,300;1,300;1,600&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { margin: 0; }
 
         .pr {
           border-top: 1px solid rgba(240,237,230,0.07);

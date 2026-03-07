@@ -292,7 +292,7 @@ function TerminalEntry({ p, isOpen, onToggle, isHovered, onHoverEnter, onHoverLe
       onClick={onToggle}
     >
       {/* ── Main row ── */}
-      <div className="mc-row">
+      <div className="mc-row" style={!isOpen && p.workNote ? { paddingBottom: "8px" } : undefined}>
         <span style={{ fontSize: "11px", color: isHovered || isOpen ? p.accent : "rgba(240,237,230,0.1)", transition: "color 0.22s", flexShrink: 0, width: "14px", lineHeight: 1 }}>
           {isHovered || isOpen ? "▶" : "·"}
         </span>
@@ -303,7 +303,7 @@ function TerminalEntry({ p, isOpen, onToggle, isHovered, onHoverEnter, onHoverLe
             <span style={{ opacity: blink ? 1 : 0, fontSize: "0.55em", verticalAlign: "middle", marginLeft: "5px", transition: "opacity 0.05s" }}>▮</span>
           )}
         </div>
-        <div style={{ textAlign: "right", flexShrink: 0 }}>
+        <div className="mc-meta">
           <div style={{ fontSize: "9px", color: "rgba(240,237,230,0.13)", letterSpacing: "0.08em", marginBottom: "5px" }}>{p.year}</div>
           <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", flexWrap: "wrap" }}>
             {p.tags.map((tag) => (
@@ -312,6 +312,11 @@ function TerminalEntry({ p, isOpen, onToggle, isHovered, onHoverEnter, onHoverLe
           </div>
         </div>
       </div>
+
+      {/* ── Collapsed teaser ── */}
+      {!isOpen && p.workNote && (
+        <div className="mc-teaser">{p.workNote}</div>
+      )}
 
       {/* ── Expanded section ── */}
       {isOpen && (
@@ -412,6 +417,17 @@ export default function Portfolio() {
           flex-direction: column;
           gap: 14px;
         }
+        .mc-meta { text-align: right; flex-shrink: 0; }
+        .mc-teaser {
+          font-size: 8px;
+          color: rgba(240,237,230,0.1);
+          letter-spacing: 0.06em;
+          padding: 0 0 18px 32px;
+          font-style: italic;
+          line-height: 1.6;
+          transition: color 0.22s;
+        }
+        .mc-entry:hover .mc-teaser { color: rgba(240,237,230,0.22); }
         @keyframes mcIn {
           from { opacity: 0; transform: translateX(-10px); }
           to { opacity: 1; transform: translateX(0); }
@@ -426,6 +442,8 @@ export default function Portfolio() {
           .mc-title { font-size: clamp(30px, 9vw, 52px) !important; }
           .mc-entry:hover .mc-row { padding-left: 0; }
           .mc-sub { margin-left: 0; padding-left: 16px; }
+          .mc-meta { width: 100%; text-align: left; }
+          .mc-teaser { padding-left: 0; }
         }
       `}</style>
 
@@ -453,9 +471,18 @@ export default function Portfolio() {
             Gordon Tsui
           </div>
           <div style={{ marginTop: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ fontSize: "8px", color: "rgba(240,237,230,0.16)", letterSpacing: "0.2em", textTransform: "uppercase" }}>Software Engineer · Vancouver, BC</span>
+            <span style={{ fontSize: "8px", color: "rgba(240,237,230,0.16)", letterSpacing: "0.2em", textTransform: "uppercase" }}>Web Team Lead · Full-Stack Engineer · Vancouver, BC</span>
             <span style={{ opacity: blink ? 1 : 0, color: "rgba(240,237,230,0.4)", fontSize: "12px", transition: "opacity 0.05s", lineHeight: 1 }}>▮</span>
           </div>
+          {/* Tech stack keywords */}
+          <div style={{ marginTop: "10px", fontSize: "8px", color: "rgba(240,237,230,0.09)", letterSpacing: "0.14em", textTransform: "uppercase" }}>
+            Node.js · React · PostgreSQL · AWS · Jenkins · Shopify
+          </div>
+        </div>
+
+        {/* Bio */}
+        <div style={{ fontSize: "9px", color: "rgba(240,237,230,0.19)", letterSpacing: "0.05em", marginBottom: "8px", lineHeight: 1.7, fontStyle: "italic" }}>
+          // Full-stack engineer and team lead. Retention-focused product development, cloud infrastructure, and shipping velocity.
         </div>
 
         {/* Command line before list */}
@@ -483,7 +510,7 @@ export default function Portfolio() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: "9px", color: "rgba(240,237,230,0.1)", letterSpacing: "0.1em" }}>{new Date().getFullYear()} — Vancouver, BC</span>
             <div style={{ display: "flex", gap: "24px" }}>
-              {["GitHub", "LinkedIn", "Email"].map((l) => (
+              {["GitHub", "LinkedIn", "Email", "Resume"].map((l) => (
                 <span key={l} style={{ fontSize: "9px", letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(240,237,230,0.16)" }}>{l}</span>
               ))}
             </div>

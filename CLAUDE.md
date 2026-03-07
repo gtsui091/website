@@ -14,9 +14,7 @@ npm run deploy     # build + push to gh-pages branch (deploys to gordontsui.ca)
 
 ## Git Identity
 
-Always use the personal GitHub account for this repo:
-- **Email:** tsui.gordon.9@gmail.com
-- **Username:** gtsui091
+Always use the personal GitHub account for this repo (configured in local `.git/config`).
 
 ## Project structure
 

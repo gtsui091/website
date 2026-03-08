@@ -288,22 +288,26 @@ function TerminalEntry({ p, isOpen, onToggle, isHovered, onHoverEnter, onHoverLe
   return (
     <div
       className="mc-entry"
+      role="button"
+      tabIndex={0}
+      aria-expanded={isOpen}
       onMouseEnter={onHoverEnter}
       onMouseLeave={onHoverLeave}
       onClick={onToggle}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } }}
     >
       {/* ── Main row ── */}
-      <div className="mc-row">
+      <div className="mc-row" style={!isOpen && p.workNote ? { paddingBottom: "8px" } : undefined}>
         <span style={{ fontSize: "11px", color: isHovered || isOpen ? p.accent : "rgba(240,237,230,0.18)", transition: "color 0.22s", flexShrink: 0, width: "14px", lineHeight: 1 }}>
           ▶
         </span>
         <span style={{ fontSize: "9px", color: isHovered ? p.accent : "rgba(240,237,230,0.17)", letterSpacing: "0.06em", flexShrink: 0, transition: "color 0.22s", lineHeight: 1 }}>{p.num}</span>
-        <div className="mc-title" style={{ flex: 1, color: isHovered ? p.accent : "rgba(240,237,230,0.82)" }}>
+        <h2 className="mc-title" style={{ flex: 1, color: isHovered ? p.accent : "rgba(240,237,230,0.82)" }}>
           <ScrambleTitle text={p.title} active={isHovered} />
           {(isHovered || isOpen) && (
-            <span style={{ opacity: blink ? 1 : 0, fontSize: "0.55em", verticalAlign: "middle", marginLeft: "5px", transition: "opacity 0.05s" }}>▮</span>
+            <span aria-hidden="true" style={{ opacity: blink ? 1 : 0, fontSize: "0.55em", verticalAlign: "middle", marginLeft: "5px", transition: "opacity 0.05s" }}>▮</span>
           )}
-        </div>
+        </h2>
         <div className="mc-meta" style={{ textAlign: "right", flexShrink: 0 }}>
           <div className="mc-year" style={{ fontSize: "10px", color: "rgba(240,237,230,0.28)", letterSpacing: "0.08em", marginBottom: "5px" }}>{p.year}</div>
           <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", flexWrap: "wrap" }}>
@@ -313,6 +317,11 @@ function TerminalEntry({ p, isOpen, onToggle, isHovered, onHoverEnter, onHoverLe
           </div>
         </div>
       </div>
+
+      {/* ── Collapsed teaser ── */}
+      {!isOpen && p.workNote && (
+        <div className="mc-teaser">{p.workNote}</div>
+      )}
 
       {/* ── Expanded section ── */}
       {isOpen && (
@@ -413,9 +422,30 @@ export default function Portfolio() {
           flex-direction: column;
           gap: 14px;
         }
+        .mc-meta { text-align: right; flex-shrink: 0; }
+        .mc-teaser {
+          font-size: 8px;
+          color: rgba(240,237,230,0.1);
+          letter-spacing: 0.06em;
+          padding: 0 0 18px 32px;
+          font-style: italic;
+          line-height: 1.6;
+          transition: color 0.22s;
+        }
+        .mc-entry:hover .mc-teaser { color: rgba(240,237,230,0.22); }
         @keyframes mcIn {
           from { opacity: 0; transform: translateX(-10px); }
           to { opacity: 1; transform: translateX(0); }
+        }
+        .mc-entry:focus-visible { outline: 1px solid rgba(240,237,230,0.4); outline-offset: -2px; }
+        .sr-skip {
+          position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden;
+        }
+        .sr-skip:focus-visible {
+          position: fixed; top: 16px; left: 16px; width: auto; height: auto;
+          padding: 8px 16px; background: #060808; border: 1px solid rgba(240,237,230,0.4);
+          color: rgba(240,237,230,0.88); font-size: 11px; letter-spacing: 0.08em;
+          text-decoration: none; z-index: 999;
         }
         @media (max-width: 768px) {
           .mc-row {
@@ -430,17 +460,20 @@ export default function Portfolio() {
           .mc-meta { display: flex; flex-direction: row; align-items: baseline; gap: 10px; width: 100%; text-align: left !important; }
           .mc-meta > div:last-child { justify-content: flex-start !important; }
           .mc-year { margin-bottom: 0 !important; }
+          .mc-teaser { padding-left: 0; }
           .bg-canvas { display: none !important; }
         }
       `}</style>
 
+      <a className="sr-skip" href="#main-content">Skip to content</a>
+
       {/* Background canvas — very subtle, just a hint */}
-      <div className="bg-canvas" style={{ position: "fixed", inset: 0, opacity: hovEntry ? 0.11 : 0, transition: "opacity 0.6s ease", pointerEvents: "none", zIndex: 0 }}>
+      <div className="bg-canvas" aria-hidden="true" style={{ position: "fixed", inset: 0, opacity: hovEntry ? 0.11 : 0, transition: "opacity 0.6s ease", pointerEvents: "none", zIndex: 0 }}>
         {hovEntry && <ProjectVisual visual={hovEntry.visual} color={hovEntry.accent} />}
       </div>
       <div style={{ position: "fixed", inset: 0, backgroundImage: GRAIN_URL, backgroundSize: "180px", opacity: 0.04, zIndex: 1, pointerEvents: "none" }} />
 
-      <div style={{ position: "relative", zIndex: 2, maxWidth: "880px", margin: "0 auto", padding: "0 48px" }}>
+      <main id="main-content" style={{ position: "relative", zIndex: 2, maxWidth: "880px", margin: "0 auto", padding: "0 48px" }}>
 
         {/* Terminal header */}
         <div style={{ paddingTop: "72px", paddingBottom: "52px" }}>
@@ -454,12 +487,16 @@ export default function Portfolio() {
           </div>
 
           {/* Large name — Cormorant as deliberate contrast */}
-          <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(56px, 8.5vw, 104px)", fontStyle: "italic", fontWeight: 300, color: hovEntry ? hovEntry.accent : "rgba(240,237,230,0.88)", lineHeight: 0.95, letterSpacing: "-0.03em", transition: "color 0.55s ease" }}>
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(56px, 8.5vw, 104px)", fontStyle: "italic", fontWeight: 300, color: hovEntry ? hovEntry.accent : "rgba(240,237,230,0.88)", lineHeight: 0.95, letterSpacing: "-0.03em", transition: "color 0.55s ease" }}>
             Gordon Tsui
-          </div>
-          <div style={{ marginTop: "14px", display: "flex", alignItems: "center", gap: "6px" }}>
-            <span style={{ fontSize: "11px", color: "rgba(240,237,230,0.38)", letterSpacing: "0.18em", textTransform: "uppercase" }}>Software Engineer · Vancouver, BC</span>
-            <span style={{ opacity: blink ? 1 : 0, color: "rgba(240,237,230,0.4)", fontSize: "12px", transition: "opacity 0.05s", lineHeight: 1 }}>▮</span>
+          </h1>
+          <div style={{ marginTop: "14px", display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+              <span style={{ fontSize: "11px", color: "rgba(240,237,230,0.35)", letterSpacing: "0.2em", textTransform: "uppercase" }}>Web Team Lead · Full-Stack Engineer · Vancouver, BC</span>
+              <span aria-hidden="true" style={{ opacity: blink ? 1 : 0, color: "rgba(240,237,230,0.4)", fontSize: "12px", transition: "opacity 0.05s", lineHeight: 1 }}>▮</span>
+            </div>
+            <div style={{ fontSize: "11px", color: "rgba(240,237,230,0.28)", letterSpacing: "0.18em", textTransform: "uppercase" }}>Node.js · React · PostgreSQL · AWS · Jenkins · Shopify</div>
+            <div style={{ fontSize: "10px", color: "rgba(240,237,230,0.30)", letterSpacing: "0.04em" }}>// Full-stack engineer and team lead. Retention-focused product development, cloud infrastructure, and shipping velocity.</div>
           </div>
         </div>
 
@@ -487,7 +524,7 @@ export default function Portfolio() {
           <div style={{ fontSize: "9px", color: "rgba(240,237,230,0.09)", letterSpacing: "0.08em", marginBottom: "16px" }}>$ echo $CONTACT</div>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: "9px", color: "rgba(240,237,230,0.1)", letterSpacing: "0.1em" }}>{new Date().getFullYear()} — Vancouver, BC</span>
-            <div style={{ display: "flex", gap: "24px" }}>
+            <nav aria-label="Social links" style={{ display: "flex", gap: "24px" }}>
               {[
                 { label: "GitHub",   href: "https://github.com/gtsui091", external: true },
                 { label: "LinkedIn", href: "https://www.linkedin.com/in/gordontsui/", external: true },
@@ -501,10 +538,10 @@ export default function Portfolio() {
                   onMouseLeave={(e) => e.currentTarget.style.color = "rgba(240,237,230,0.28)"}
                 >{label}</a>
               ))}
-            </div>
+            </nav>
           </div>
         </footer>
-      </div>
+      </main>
     </div>
   );
 }

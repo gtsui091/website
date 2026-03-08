@@ -12,6 +12,10 @@ npm run preview    # preview the production build locally
 npm run deploy     # build + push to gh-pages branch (deploys to gordontsui.ca)
 ```
 
+## Git Identity
+
+Always use the personal GitHub account for this repo (configured in local `.git/config`).
+
 ## Project structure
 
 ```

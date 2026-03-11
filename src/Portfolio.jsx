@@ -279,7 +279,8 @@ function ScrambleTitle({ text, active, className, style }) {
       setDisplay(
         text.split("").map((ch, i) => {
           if (i < resolved || ch === " " || ch === "-") return ch;
-          return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+          const rand = SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
+          return ch === ch.toUpperCase() ? rand : rand.toLowerCase();
         }).join("")
       );
     }, 55);
@@ -327,12 +328,12 @@ function TerminalSubItem({ sub, color, staggerDelay, labelSpeed, detailSpeed, on
   return (
     <div style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: "14px", alignItems: "baseline" }}>
       <span style={{
-        fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase",
-        color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.6)`, textAlign: "right",
+        fontSize: "8px", letterSpacing: "0.12em", textTransform: "uppercase",
+        color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.6)`, textAlign: "left",
       }}>
         <TypewriterLine text={sub.label} speed={labelSpeed} delay={staggerDelay} onDone={() => setLabelDone(true)} />
       </span>
-      <span style={{ fontSize: "9.5px", color: "rgba(240,237,230,0.45)", lineHeight: 1.7 }}>
+      <span style={{ fontSize: "10px", color: "rgba(240,237,230,0.33)", lineHeight: 1.7 }}>
         {/* Only mount once the label column is done — cursor moves left→right into this column */}
         {labelDone && <TypewriterLine text={`→ ${sub.detail}`} speed={detailSpeed} delay={0} onDone={onDone} />}
       </span>
@@ -523,8 +524,8 @@ function TerminalEntry({ p, isOpen, onToggle, isHovered, onHoverEnter, onHoverLe
     >
       {/* ── Main row ── */}
       <div className="mc-row" style={!isOpen && p.workNote ? { paddingBottom: "8px" } : undefined}>
-        <span style={{ fontSize: "11px", color: isHovered || isOpen ? p.accent : "rgba(240,237,230,0.1)", transition: "color 0.22s", flexShrink: 0, width: "14px", lineHeight: 1 }}>
-          {isHovered || isOpen ? "▶" : "·"}
+        <span style={{ fontSize: "11px", color: isHovered || isOpen ? p.accent : "rgba(240,237,230,0.18)", transition: "color 0.22s", flexShrink: 0, width: "14px", lineHeight: 1 }}>
+          ▶
         </span>
         <span style={{ fontSize: "9px", color: isHovered ? p.accent : "rgba(240,237,230,0.17)", letterSpacing: "0.06em", flexShrink: 0, transition: "color 0.22s", lineHeight: 1 }}>{p.num}</span>
         <h2 className="mc-title" style={{ flex: 1, color: isHovered ? p.accent : "rgba(240,237,230,0.82)" }}>
@@ -533,13 +534,11 @@ function TerminalEntry({ p, isOpen, onToggle, isHovered, onHoverEnter, onHoverLe
             <span aria-hidden="true" style={{ opacity: blink ? 1 : 0, fontSize: "0.55em", verticalAlign: "middle", marginLeft: "5px", transition: "opacity 0.05s" }}>▮</span>
           )}
         </h2>
-        <div style={{ textAlign: "right", flexShrink: 0 }}>
-        </div>
-        <div className="mc-meta">
-          <div style={{ fontSize: "9px", color: "rgba(240,237,230,0.13)", letterSpacing: "0.08em", marginBottom: "5px" }}>{p.year}</div>
+        <div className="mc-meta" style={{ textAlign: "right", flexShrink: 0 }}>
+          <div className="mc-year" style={{ fontSize: "10px", color: "rgba(240,237,230,0.28)", letterSpacing: "0.08em", marginBottom: "5px" }}>{p.year}</div>
           <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end", flexWrap: "wrap" }}>
             {p.tags.map((tag) => (
-              <span key={tag} style={{ fontSize: "8px", letterSpacing: "0.12em", textTransform: "uppercase", color: `rgba(${rgb.r},${rgb.g},${rgb.b},${isHovered ? 0.58 : 0.18})`, transition: "color 0.22s" }}>{tag}</span>
+              <span key={tag} style={{ fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: `rgba(${rgb.r},${rgb.g},${rgb.b},${isHovered ? 0.65 : 0.28})`, transition: "color 0.22s" }}>{tag}</span>
             ))}
           </div>
         </div>
@@ -554,7 +553,7 @@ function TerminalEntry({ p, isOpen, onToggle, isHovered, onHoverEnter, onHoverLe
       {isOpen && (
         <div className="mc-sub">
           {/* Desc fades in immediately — too long to type comfortably */}
-          <div style={{ fontSize: "9.5px", color: "rgba(240,237,230,0.48)", lineHeight: 1.8, maxWidth: "580px", animation: "mcIn 0.3s cubic-bezier(0.16,1,0.3,1) both" }}>
+          <div style={{ fontSize: "10px", color: "rgba(240,237,230,0.36)", lineHeight: 1.8, maxWidth: "580px", animation: "mcIn 0.3s cubic-bezier(0.16,1,0.3,1) both" }}>
             {p.desc}
           </div>
 
@@ -773,17 +772,20 @@ export default function Portfolio() {
           .mc-title { font-size: clamp(30px, 9vw, 52px) !important; }
           .mc-entry:hover .mc-row { padding-left: 0; }
           .mc-sub { margin-left: 0; padding-left: 16px; }
-          .mc-meta { width: 100%; text-align: left; }
+          .mc-meta { display: flex; flex-direction: row; align-items: baseline; gap: 10px; width: 100%; text-align: left !important; }
+          .mc-meta > div:last-child { justify-content: flex-start !important; }
+          .mc-year { margin-bottom: 0 !important; }
           .mc-teaser { padding-left: 0; }
           .mc-detail-grid { grid-template-columns: 1fr; gap: 16px; }
           .mc-project-detail { margin-left: 0; padding-left: 12px; }
+          .bg-canvas { display: none !important; }
         }
       `}</style>
 
       <a className="sr-skip" href="#main-content">Skip to content</a>
 
       {/* Background canvas — very subtle, just a hint */}
-      <div aria-hidden="true" style={{ position: "fixed", inset: 0, opacity: hovEntry ? 0.11 : 0, transition: "opacity 0.6s ease", pointerEvents: "none", zIndex: 0 }}>
+      <div className="bg-canvas" aria-hidden="true" style={{ position: "fixed", inset: 0, opacity: hovEntry ? 0.11 : 0, transition: "opacity 0.6s ease", pointerEvents: "none", zIndex: 0 }}>
         {hovEntry && <ProjectVisual visual={hovEntry.visual} color={hovEntry.accent} />}
       </div>
       <div style={{ position: "fixed", inset: 0, backgroundImage: GRAIN_URL, backgroundSize: "180px", opacity: 0.04, zIndex: 1, pointerEvents: "none" }} />
@@ -813,15 +815,6 @@ export default function Portfolio() {
             <div style={{ fontSize: "11px", color: "rgba(240,237,230,0.28)", letterSpacing: "0.18em", textTransform: "uppercase" }}>Node.js · React · PostgreSQL · AWS · Jenkins · Shopify</div>
             <div style={{ fontSize: "10px", color: "rgba(240,237,230,0.30)", letterSpacing: "0.04em" }}>// Full-stack engineer and team lead. Retention-focused product development, cloud infrastructure, and shipping velocity.</div>
           </div>
-          {/* Tech stack keywords */}
-          <div style={{ marginTop: "10px", fontSize: "8px", color: "rgba(240,237,230,0.09)", letterSpacing: "0.14em", textTransform: "uppercase" }}>
-            Node.js · React · PostgreSQL · AWS · Jenkins · Shopify
-          </div>
-        </div>
-
-        {/* Bio */}
-        <div style={{ fontSize: "9px", color: "rgba(240,237,230,0.19)", letterSpacing: "0.05em", marginBottom: "8px", lineHeight: 1.7, fontStyle: "italic" }}>
-          // Full-stack engineer and team lead. Retention-focused product development, cloud infrastructure, and shipping velocity.
         </div>
 
         {/* Command line before list */}
@@ -850,13 +843,16 @@ export default function Portfolio() {
             <span style={{ fontSize: "9px", color: "rgba(240,237,230,0.1)", letterSpacing: "0.1em" }}>{new Date().getFullYear()} — Vancouver, BC</span>
             <nav aria-label="Social links" style={{ display: "flex", gap: "24px" }}>
               {[
-                { label: "GitHub", href: "#" },
-                { label: "LinkedIn", href: "#" },
-                { label: "Email", href: "#" },
-              ].map(({ label, href }) => (
-                <a key={label} href={href} style={{ fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(240,237,230,0.38)", textDecoration: "none" }}
+                { label: "GitHub",   href: "https://github.com/gtsui091", external: true },
+                { label: "LinkedIn", href: "https://www.linkedin.com/in/gordontsui/", external: true },
+                { label: "Email",    href: "mailto:tsui.gordon.9@gmail.com", external: false },
+                { label: "Resume",   href: "#", external: false },
+              ].map(({ label, href, external }) => (
+                <a key={label} href={href}
+                  {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                  style={{ fontSize: "11px", letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(240,237,230,0.28)", textDecoration: "none" }}
                   onMouseEnter={(e) => e.currentTarget.style.color = "rgba(240,237,230,0.7)"}
-                  onMouseLeave={(e) => e.currentTarget.style.color = "rgba(240,237,230,0.38)"}
+                  onMouseLeave={(e) => e.currentTarget.style.color = "rgba(240,237,230,0.28)"}
                 >{label}</a>
               ))}
             </nav>

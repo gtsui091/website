@@ -28,6 +28,88 @@ const experiences = [
         { value: "0", label: "Downtime incidents" },
       ],
     },
+    projects: [
+      {
+        id: "onboarding-redesign",
+        label: "Onboarding Redesign",
+        tags: ["Next.js", "Feature Flags", "UX"],
+        year: "2024",
+        role: "Lead Engineer",
+        desc: "Rebuilt the activation flow from swim survey to first in-goggle tutorial. +1\u20132pp conversion impact.",
+        detail: {
+          problem: "Trial-to-paid conversion was sitting at 69%. The core issue wasn\u2019t the product \u2014 it was that users weren\u2019t reaching it. New subscribers were completing account setup but not finishing device pairing, not discovering HeadCoach, and not completing a first coached swim. Users who swam once churned at 40%. Users who swam five times churned at 9%. The activation flow was leaving most new users on the wrong side of that curve.",
+          process: "Mapped every step from account creation to first in-goggle workout and identified the specific drop-off points: a swim survey disconnected from any visible outcome, a device pairing flow with too little guidance, and a first workout tutorial that wasn\u2019t surfaced to new users at all. Redesigned the swim survey to visibly feed into HeadCoach plan personalisation so users understood why it mattered. Built and shipped the First Swim Tutorial \u2014 an in-goggle guided experience triggered on first device connection. Coordinated delivery across web, mobile, and firmware teams across four sprint tickets. Used LaunchDarkly for staged rollout and Amplitude to instrument the funnel at each step.",
+          outcome: "The group with the First Swim Tutorial showed 60.5% workout swim retention vs. 55.6% without it \u2014 a +4.9pp lift at the highest-risk moment in the lifecycle. The redesigned activation flow contributed 1\u20132pp of the overall trial-to-paid conversion improvement, raising conversion from 69% to 72% as part of a coordinated set of engineering initiatives. Better-activated users went on to complete more workouts, compounding downstream retention across cohorts.",
+          metrics: [
+            { label: "WO swim retention (w/ tutorial)", value: "60.5%" },
+            { label: "WO swim retention (control)", value: "55.6%" },
+            { label: "Lift", value: "+4.9pp" },
+            { label: "Conversion contribution", value: "+1\u20132pp" },
+          ],
+          stack: ["Next.js", "LaunchDarkly", "Amplitude", "React", "Figma"],
+        },
+      },
+      {
+        id: "streaks",
+        label: "Streaks",
+        tags: ["React", "Push Notifications", "A/B Testing"],
+        year: "2024",
+        role: "Lead Engineer",
+        desc: "Hackathon concept shipped to A/B production. Statistically significant \u221212% churn reduction.",
+        detail: {
+          problem: "Users who were swimming regularly were still churning \u2014 not because the product had failed them, but because nothing in the experience acknowledged their consistency. Each swim ended without carrying anything forward. There was no signal that made the habit feel visible or worth protecting, and no nudge timed to the moment when a streak was at risk of breaking.",
+          process: "Built initially as a hackathon project, which was intentional \u2014 the goal was to validate the concept fast before investing in a polished implementation. Wrote the streak calculation logic against the Redshift data warehouse: queried weekly swim activity per user, calculated consecutive active weeks, and classified each user\u2019s streak state (new streak, extended streak, broken streak, at risk). Built a Node.js script to generate personalised push notification copy based on streak state and batch-send to variant B users at scale, using windowed async calls to respect rate limits. Assigned variants deterministically using SHA256 hash of userId + experiment key \u2014 no flag service required, reproducible and auditable. Ran as a 50/50 split against a control group.",
+          outcome: "Users exposed to streaks messaging showed a statistically significant 12% reduction in churn rate. The result held up to significance checks and the feature graduated to a permanent part of FORM\u2019s engagement layer. It\u2019s a concrete example of a low-cost, high-signal intervention: no new UI, no infrastructure spend \u2014 just making the user\u2019s own behaviour visible at the right moment. Contributed to the broader \u22121.4pp absolute churn reduction (7.2% \u2192 5.8%) alongside the other engagement and lifecycle initiatives.",
+          metrics: [
+            { label: "Churn reduction", value: "\u221212%" },
+            { label: "Statistical sig.", value: "\u2713" },
+            { label: "Split", value: "50 / 50 A/B" },
+            { label: "Time to production", value: "Hackathon \u2192 weeks" },
+          ],
+          stack: ["Node.js", "Redshift", "MySQL", "Push Notifications", "SHA256 variant assignment"],
+        },
+      },
+      {
+        id: "web-driven-ui",
+        label: "Web-Driven UI",
+        tags: ["React Native", "Architecture", "Mobile"],
+        year: "2023",
+        role: "Lead Engineer",
+        desc: "Eliminated the mobile release cycle as a bottleneck. Unlocked mobile A/B testing at web speed.",
+        detail: {
+          problem: "Every change to the FORM mobile app UI required a full native release \u2014 App Store review, approval, staged rollout \u2014 which took days to weeks per change. This made A/B testing on mobile practically impossible and meant the team couldn\u2019t respond to data quickly. The experimentation work that would eventually drive +3pp conversion and \u221219% churn had a hard dependency on solving this first. Without it, every experiment was a slow, expensive bet.",
+          process: "Researched server-driven UI patterns and evaluated approaches: pure WebView rendering, React Native Web, and a hybrid model where key surfaces pull their layout and content from a backend response at runtime. Led the technical scoping, drove alignment with the mobile team on the integration contract between web and native layers, and documented the architecture for handoff. The implementation decoupled UI rendering from the native binary \u2014 changes to instrumented surfaces could now be deployed and toggled at web speed, with no App Store submission required.",
+          outcome: "Mobile release cycle dependency was eliminated for the surfaces in scope. The team could ship, test, and iterate on mobile UI at the same cadence as web \u2014 which meant A/B tests that previously took weeks to run could now turn around in days. This was a direct architectural prerequisite for the experimentation work that contributed 0.5\u20131pp to trial-to-paid conversion. It also changed how the team thought about mobile development: web became the fast path for iterating on product surfaces, native became the stable foundation underneath.",
+          metrics: [
+            { label: "Release dependency", value: "Eliminated" },
+            { label: "Iteration speed", value: "Weeks \u2192 Days" },
+            { label: "Unlocked", value: "Mobile A/B testing" },
+            { label: "Conversion impact", value: "Foundation for +3pp" },
+          ],
+          stack: ["React Native", "Web", "Node.js", "Server-Driven UI", "Architecture"],
+        },
+      },
+      {
+        id: "subscriptions-infrastructure",
+        label: "Subscriptions Infrastructure",
+        tags: ["Node.js", "Stripe", "Google Play", "App Store"],
+        year: "2021\u20132023",
+        role: "Lead Engineer",
+        desc: "Prepaid, Try Before You Buy, variable trials \u2014 built for flexibility. Reduced involuntary churn.",
+        detail: {
+          problem: "FORM\u2019s subscription backend was built for a single model: monthly or annual, billed immediately on purchase. The business needed to test acquisition offers that didn\u2019t fit that shape \u2014 a 30-day Try Before You Buy, prepaid plans, and variable trial lengths tied to hardware bundles. None of these could be supported without significant rework. At the same time, involuntary churn from payment failures and missed renewals was a quiet but steady drag on retention that wasn\u2019t being actively recovered.",
+          process: "Built and extended the subscription backend across all three platforms: Google Play (receipt verification, RTDN webhook handling for the full subscription lifecycle \u2014 renewals, cancellations, account hold, grace periods, pauses), App Store (server-to-server notifications, restore flows), and Stripe. Designed a source-agnostic subscription state model so that Apple, Google, and Stripe subscriptions all resolved through the same access-check path \u2014 no platform-specific branching in the core entitlement logic. Implemented the Try Before You Buy flow using ReCharge\u2019s charge_delay mechanism, coordinating with the MAF system for checkout. Added grace period handling and renewal recovery to reduce payment-failure churn.",
+          outcome: "FORM could launch new subscription offers \u2014 TBYB, prepaid, campaign-specific trial lengths \u2014 without engineering rework for each one. The infrastructure absorbed the Stripe migration without requiring changes to the entitlement layer. Involuntary churn from payment failures dropped as grace period and account hold handling caught renewals that previously fell through. The \u22120.1pp churn contribution from infrastructure improvements represents a small but structurally important floor: fixing the leaks that no engagement feature can recover.",
+          metrics: [
+            { label: "Platforms unified", value: "3" },
+            { label: "Offers unlocked", value: "TBYB \u00b7 Prepaid \u00b7 Variable trials" },
+            { label: "Involuntary churn", value: "Reduced" },
+            { label: "Churn contribution", value: "\u22120.1pp" },
+          ],
+          stack: ["Node.js", "TypeScript", "Stripe", "Google Play API", "App Store", "ReCharge"],
+        },
+      },
+    ],
   },
   {
     id: 2, num: "02", title: "Sea Around Us",
@@ -260,8 +342,150 @@ function TerminalSubItem({ sub, color, staggerDelay, labelSpeed, detailSpeed, on
 
 // Full entry row + expandable section. Trailing prompt waits for ALL detail
 // columns to finish typing (not just the labels).
+function ProjectRow({ project, accent, isActive, onClick, blink }) {
+  const [hov, setHov] = useState(false);
+  const rgb = hexRgb(accent);
+  const lit = hov || isActive;
+
+  return (
+    <div
+      className="mc-project-row"
+      role="button"
+      tabIndex={0}
+      aria-expanded={isActive}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onClick(); }
+        if (e.key === "Escape" && isActive) { e.stopPropagation(); onClick(); }
+      }}
+    >
+      <div style={{
+        display: "flex", alignItems: "baseline", gap: "10px",
+        paddingLeft: lit ? "6px" : "0px",
+        transition: "padding-left 0.2s ease",
+      }}>
+        <span style={{
+          fontSize: "9px",
+          color: `rgba(${rgb.r},${rgb.g},${rgb.b},${lit ? 0.8 : 0.6})`,
+          transition: "color 0.2s",
+          flexShrink: 0,
+        }}>▶</span>
+        <span style={{
+          fontSize: "10px",
+          color: `rgba(240,237,230,${lit ? 0.9 : 0.65})`,
+          letterSpacing: "0.04em",
+          transition: "color 0.2s",
+          flex: 1,
+        }}>{project.label}</span>
+        <span style={{ fontSize: "9px", color: "rgba(240,237,230,0.18)", letterSpacing: "0.1em", flexShrink: 0 }}>
+          {project.year}
+        </span>
+        <div style={{ display: "flex", gap: "6px", flexShrink: 0 }}>
+          {project.tags.map((tag) => (
+            <span key={tag} style={{
+              fontSize: "8px", letterSpacing: "0.12em", textTransform: "uppercase",
+              color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.28)`,
+            }}>{tag}</span>
+          ))}
+        </div>
+      </div>
+      {!isActive && (
+        <div style={{
+          fontSize: "9px", color: "rgba(240,237,230,0.25)",
+          marginTop: "4px", paddingLeft: "19px",
+          letterSpacing: "0.03em", lineHeight: 1.5,
+        }}>
+          {project.desc}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProjectDetail({ project, accent, blink }) {
+  const rgb = hexRgb(accent);
+  const d = project.detail;
+
+  return (
+    <div className="mc-project-detail" style={{ borderLeft: `1px solid rgba(${rgb.r},${rgb.g},${rgb.b},0.12)` }}>
+      {/* Header comment */}
+      <div style={{
+        fontSize: "9px", fontStyle: "italic",
+        color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.35)`,
+        letterSpacing: "0.06em", marginBottom: "20px",
+      }}>
+        // {project.id}
+      </div>
+
+      {/* 3-column grid */}
+      <div className="mc-detail-grid">
+        {[
+          { heading: "THE PROBLEM", text: d.problem },
+          { heading: "THE PROCESS", text: d.process },
+          { heading: "THE OUTCOME", text: d.outcome },
+        ].map(({ heading, text }) => (
+          <div key={heading}>
+            <div style={{
+              fontSize: "8px", letterSpacing: "0.16em", textTransform: "uppercase",
+              color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.5)`, marginBottom: "8px",
+            }}>{heading}</div>
+            <div style={{
+              fontSize: "9px", color: "rgba(240,237,230,0.38)",
+              lineHeight: 1.85, fontWeight: 300,
+            }}>{text}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Metrics row */}
+      {d.metrics?.length > 0 && (
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "20px", marginBottom: "20px" }}>
+          {d.metrics.map((m) => (
+            <div key={m.label} className="mc-metric" style={{ border: `1px solid rgba(${rgb.r},${rgb.g},${rgb.b},0.15)` }}>
+              <div style={{
+                fontFamily: "'Cormorant Garamond', serif", fontSize: "22px",
+                fontWeight: 600, fontStyle: "italic",
+                color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.75)`,
+                lineHeight: 1, letterSpacing: "-0.02em",
+              }}>{m.value}</div>
+              <div style={{
+                fontSize: "8px", letterSpacing: "0.14em", textTransform: "uppercase",
+                color: "rgba(240,237,230,0.25)", marginTop: "6px",
+              }}>{m.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Stack row */}
+      {d.stack?.length > 0 && (
+        <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap", marginBottom: "14px" }}>
+          <span style={{ fontSize: "8px", letterSpacing: "0.13em", color: "rgba(240,237,230,0.18)", textTransform: "uppercase" }}>stack:</span>
+          {d.stack.map((s) => (
+            <span key={s} style={{
+              fontSize: "8px", letterSpacing: "0.1em", textTransform: "uppercase",
+              color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.4)`,
+              border: `1px solid rgba(${rgb.r},${rgb.g},${rgb.b},0.15)`,
+              padding: "3px 7px",
+            }}>{s}</span>
+          ))}
+        </div>
+      )}
+
+      {/* Closing prompt */}
+      <div style={{ fontSize: "9px", color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.38)` }}>
+        $<span style={{ opacity: blink ? 1 : 0, transition: "opacity 0.05s", marginLeft: "4px" }}>▮</span>
+      </div>
+    </div>
+  );
+}
+
 function TerminalEntry({ p, isOpen, onToggle, isHovered, onHoverEnter, onHoverLeave, blink }) {
   const [allDone, setAllDone] = useState(false);
+  const [openProject, setOpenProject] = useState(null);
+  const [cdTypingDone, setCdTypingDone] = useState(false);
   const doneCount = useRef(0);
   const trailingTimer = useRef(null);
   const rgb = hexRgb(p.accent);
@@ -274,6 +498,8 @@ function TerminalEntry({ p, isOpen, onToggle, isHovered, onHoverEnter, onHoverLe
       clearTimeout(trailingTimer.current);
       setAllDone(false);
       doneCount.current = 0;
+      setOpenProject(null);
+      setCdTypingDone(false);
     }
   }, [isOpen]);
 
@@ -349,6 +575,62 @@ function TerminalEntry({ p, isOpen, onToggle, isHovered, onHoverEnter, onHoverLe
               onDone={handleRowDone}
             />
           ))}
+
+          {/* ── Project drill-down (only for entries with projects) ── */}
+          {p.projects?.length > 0 && allDone && (
+            <div className="mc-project-list" style={{ animation: "mcIn 0.3s cubic-bezier(0.16,1,0.3,1) both" }}>
+              <div style={{
+                fontSize: "9px", letterSpacing: "0.1em",
+                color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.38)`,
+                marginTop: "20px", marginBottom: "8px",
+              }}>$ ls projects/</div>
+
+              {p.projects.map((proj) => (
+                <div key={proj.id}>
+                  <ProjectRow
+                    project={proj}
+                    accent={p.accent}
+                    isActive={openProject === proj.id}
+                    onClick={() => {
+                      if (openProject === proj.id) {
+                        setOpenProject(null);
+                        setCdTypingDone(false);
+                      } else {
+                        setOpenProject(proj.id);
+                        setCdTypingDone(false);
+                      }
+                    }}
+                    blink={blink}
+                  />
+
+                  {openProject === proj.id && (
+                    <div className="mc-cmd-line" style={{
+                      fontSize: "9px",
+                      color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.55)`,
+                      marginTop: "6px", marginBottom: "4px", paddingLeft: "19px",
+                    }}>
+                      {!cdTypingDone ? (
+                        <TypewriterLine
+                          text={`$ cd ${p.title.toLowerCase()}/${proj.id}`}
+                          speed={28}
+                          delay={80}
+                          onDone={() => setCdTypingDone(true)}
+                        />
+                      ) : (
+                        <span>{`$ cd ${p.title.toLowerCase()}/${proj.id}`}</span>
+                      )}
+                    </div>
+                  )}
+
+                  {openProject === proj.id && cdTypingDone && (
+                    <div className="mc-project-detail-wrapper">
+                      <ProjectDetail project={proj} accent={p.accent} blink={blink} />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
 
           {/* Trailing prompt — appears only once all labels have finished */}
           <div style={{
@@ -439,6 +721,39 @@ export default function Portfolio() {
           to { opacity: 1; transform: translateX(0); }
         }
         .mc-entry:focus-visible { outline: 1px solid rgba(240,237,230,0.4); outline-offset: -2px; }
+        .mc-project-row {
+          cursor: pointer;
+          padding: 10px 0;
+          border-top: 1px solid rgba(240,237,230,0.05);
+        }
+        .mc-project-row:focus-visible {
+          outline: 1px solid rgba(240,237,230,0.3);
+          outline-offset: 2px;
+        }
+        .mc-cmd-line {
+          animation: mcIn 0.15s ease both;
+        }
+        .mc-project-detail-wrapper {
+          overflow: hidden;
+          animation: mcDetailOpen 0.55s cubic-bezier(0.16,1,0.3,1) forwards;
+        }
+        .mc-project-detail {
+          margin-left: 19px;
+          padding: 14px 0 14px 16px;
+        }
+        .mc-detail-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 28px;
+          margin-bottom: 24px;
+        }
+        .mc-metric {
+          padding: 12px 16px;
+        }
+        @keyframes mcDetailOpen {
+          from { max-height: 0; opacity: 0; }
+          to { max-height: 800px; opacity: 1; }
+        }
         .sr-skip {
           position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden;
         }
@@ -460,6 +775,8 @@ export default function Portfolio() {
           .mc-sub { margin-left: 0; padding-left: 16px; }
           .mc-meta { width: 100%; text-align: left; }
           .mc-teaser { padding-left: 0; }
+          .mc-detail-grid { grid-template-columns: 1fr; gap: 16px; }
+          .mc-project-detail { margin-left: 0; padding-left: 12px; }
         }
       `}</style>
 

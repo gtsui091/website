@@ -1,5 +1,13 @@
 import { useState, useEffect, useRef } from "react";
 
+// SHA-256 hash of the access password (plaintext never stored in source)
+const PASSWORD_HASH = "a9e5996f0f6ae9d148e5e2b9624c18ce7f7096532d990bf14c96210531c4dfce";
+
+async function sha256(message) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(message));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 const experiences = [
   {
     id: 1, num: "01", title: "FORM",
@@ -652,6 +660,26 @@ export default function Portfolio() {
   const [hovered, setHovered] = useState(null);
   const [blink, setBlink] = useState(true);
 
+  // Password gate
+  const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem("pw_ok") === "1");
+  const [pwInput, setPwInput] = useState("");
+  const [pwError, setPwError] = useState(false);
+  const [pwShake, setPwShake] = useState(false);
+
+  async function handleUnlock(e) {
+    e.preventDefault();
+    const hash = await sha256(pwInput);
+    if (hash === PASSWORD_HASH) {
+      sessionStorage.setItem("pw_ok", "1");
+      setUnlocked(true);
+    } else {
+      setPwError(true);
+      setPwShake(true);
+      setPwInput("");
+      setTimeout(() => setPwShake(false), 500);
+    }
+  }
+
   const hovEntry = experiences.find((p) => p.id === hovered);
   const bgColor = hovEntry ? hovEntry.bg : "#060808";
 
@@ -659,6 +687,63 @@ export default function Portfolio() {
     const interval = setInterval(() => setBlink((b) => !b), 530);
     return () => clearInterval(interval);
   }, []);
+
+  if (!unlocked) return (
+    <div style={{
+      minHeight: "100vh", backgroundColor: "#060808",
+      fontFamily: "'DM Mono', monospace",
+      display: "flex", alignItems: "center", justifyContent: "center",
+    }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&display=swap');
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { margin: 0; }
+        @keyframes shake {
+          0%,100% { transform: translateX(0); }
+          20%,60% { transform: translateX(-8px); }
+          40%,80% { transform: translateX(8px); }
+        }
+      `}</style>
+      <form onSubmit={handleUnlock} style={{ textAlign: "center" }}>
+        <div style={{ fontSize: "9px", letterSpacing: "0.15em", color: "rgba(240,237,230,0.2)", marginBottom: "32px" }}>
+          $ access gordontsui.ca
+        </div>
+        <div style={{
+          animation: pwShake ? "shake 0.45s cubic-bezier(0.36,0.07,0.19,0.97)" : "none",
+        }}>
+          <input
+            autoFocus
+            type="password"
+            value={pwInput}
+            onChange={(e) => { setPwInput(e.target.value); setPwError(false); }}
+            placeholder="password"
+            style={{
+              background: "transparent",
+              border: "none",
+              borderBottom: `1px solid ${pwError ? "rgba(255,80,80,0.6)" : "rgba(240,237,230,0.15)"}`,
+              color: "rgba(240,237,230,0.7)",
+              fontFamily: "'DM Mono', monospace",
+              fontSize: "13px",
+              letterSpacing: "0.12em",
+              padding: "8px 4px",
+              outline: "none",
+              width: "200px",
+              textAlign: "center",
+              transition: "border-color 0.2s",
+            }}
+          />
+        </div>
+        {pwError && (
+          <div style={{ marginTop: "12px", fontSize: "9px", letterSpacing: "0.1em", color: "rgba(255,80,80,0.7)" }}>
+            access denied
+          </div>
+        )}
+        <div style={{ marginTop: "24px", fontSize: "9px", color: "rgba(240,237,230,0.1)", letterSpacing: "0.1em" }}>
+          press enter ↵
+        </div>
+      </form>
+    </div>
+  );
 
   return (
     <div style={{

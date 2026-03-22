@@ -665,6 +665,8 @@ export default function Portfolio() {
   const [pwInput, setPwInput] = useState("");
   const [pwError, setPwError] = useState(false);
   const [pwShake, setPwShake] = useState(false);
+  const [termPhase, setTermPhase] = useState(0);
+  const pwInputRef = useRef(null);
 
   async function handleUnlock(e) {
     e.preventDefault();
@@ -688,12 +690,25 @@ export default function Portfolio() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (unlocked) return;
+    const t1 = setTimeout(() => setTermPhase(1), 200);
+    const t2 = setTimeout(() => setTermPhase(2), 600);
+    const t3 = setTimeout(() => setTermPhase(3), 950);
+    const t4 = setTimeout(() => setTermPhase(4), 1250);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
+  }, [unlocked]);
+
   if (!unlocked) return (
-    <div style={{
-      minHeight: "100vh", backgroundColor: "#060808",
-      fontFamily: "'DM Mono', monospace",
-      display: "flex", alignItems: "center", justifyContent: "center",
-    }}>
+    <div
+      style={{
+        minHeight: "100vh", backgroundColor: "#060808",
+        fontFamily: "'DM Mono', monospace",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        cursor: "default",
+      }}
+      onClick={() => pwInputRef.current?.focus()}
+    >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -703,45 +718,73 @@ export default function Portfolio() {
           20%,60% { transform: translateX(-8px); }
           40%,80% { transform: translateX(8px); }
         }
+        @keyframes termIn {
+          from { opacity: 0; transform: translateY(3px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .tl { animation: termIn 0.18s ease forwards; }
       `}</style>
-      <form onSubmit={handleUnlock} style={{ textAlign: "center" }}>
-        <div style={{ fontSize: "9px", letterSpacing: "0.15em", color: "rgba(240,237,230,0.2)", marginBottom: "32px" }}>
-          $ access gordontsui.ca
+      <div style={{ width: "min(420px, 88vw)", padding: "0 20px" }}>
+        <div style={{ fontSize: "13px", letterSpacing: "0.07em", lineHeight: "1.95" }}>
+          {termPhase >= 1 && (
+            <div className="tl" style={{ color: "rgba(240,237,230,0.5)" }}>
+              <span style={{ color: "rgba(240,237,230,0.2)", marginRight: "10px" }}>$</span>
+              ssh gordon@gordontsui.ca
+            </div>
+          )}
+          {termPhase >= 2 && (
+            <div className="tl" style={{ color: "rgba(240,237,230,0.28)" }}>
+              Connected to gordontsui.ca.
+            </div>
+          )}
+          {termPhase >= 3 && (
+            <div className="tl" style={{ color: "rgba(240,237,230,0.28)" }}>
+              Authentication required.
+            </div>
+          )}
+          {pwError && (
+            <div className="tl" style={{ color: "rgba(255,65,65,0.8)" }}>
+              Access denied.
+            </div>
+          )}
+          {termPhase >= 4 && (
+            <form
+              onSubmit={handleUnlock}
+              style={{ display: "flex", alignItems: "center", animation: pwShake ? "shake 0.45s cubic-bezier(0.36,0.07,0.19,0.97)" : "none" }}
+            >
+              <span style={{ color: "rgba(240,237,230,0.28)", marginRight: "10px", userSelect: "none" }}>
+                Password:
+              </span>
+              <span
+                style={{ position: "relative", display: "inline-flex", alignItems: "center" }}
+                onClick={(e) => { e.stopPropagation(); pwInputRef.current?.focus(); }}
+              >
+                <span style={{ color: "rgba(240,237,230,0.65)", letterSpacing: "0.18em", fontSize: "11px" }}>
+                  {"•".repeat(pwInput.length)}
+                </span>
+                <span style={{
+                  display: "inline-block", width: "7px", height: "13px", marginLeft: "1px",
+                  backgroundColor: blink ? "rgba(240,237,230,0.6)" : "transparent",
+                  verticalAlign: "middle",
+                }} />
+                <input
+                  ref={pwInputRef}
+                  autoFocus
+                  type="password"
+                  autoComplete="current-password"
+                  value={pwInput}
+                  onChange={(e) => { setPwInput(e.target.value); setPwError(false); }}
+                  style={{
+                    position: "absolute", opacity: 0,
+                    left: 0, top: 0, width: "100%", height: "100%",
+                    border: "none", outline: "none", background: "transparent", cursor: "default",
+                  }}
+                />
+              </span>
+            </form>
+          )}
         </div>
-        <div style={{
-          animation: pwShake ? "shake 0.45s cubic-bezier(0.36,0.07,0.19,0.97)" : "none",
-        }}>
-          <input
-            autoFocus
-            type="password"
-            value={pwInput}
-            onChange={(e) => { setPwInput(e.target.value); setPwError(false); }}
-            placeholder="password"
-            style={{
-              background: "transparent",
-              border: "none",
-              borderBottom: `1px solid ${pwError ? "rgba(255,80,80,0.6)" : "rgba(240,237,230,0.15)"}`,
-              color: "rgba(240,237,230,0.7)",
-              fontFamily: "'DM Mono', monospace",
-              fontSize: "13px",
-              letterSpacing: "0.12em",
-              padding: "8px 4px",
-              outline: "none",
-              width: "200px",
-              textAlign: "center",
-              transition: "border-color 0.2s",
-            }}
-          />
-        </div>
-        {pwError && (
-          <div style={{ marginTop: "12px", fontSize: "9px", letterSpacing: "0.1em", color: "rgba(255,80,80,0.7)" }}>
-            access denied
-          </div>
-        )}
-        <div style={{ marginTop: "24px", fontSize: "9px", color: "rgba(240,237,230,0.1)", letterSpacing: "0.1em" }}>
-          press enter ↵
-        </div>
-      </form>
+      </div>
     </div>
   );
 

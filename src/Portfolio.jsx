@@ -902,6 +902,7 @@ export default function Portfolio() {
           text-decoration: none; z-index: 999;
         }
         @media (max-width: 768px) {
+          #main-content { padding: 0 20px !important; }
           .mc-row {
             flex-wrap: wrap;
             align-items: flex-start;
@@ -918,6 +919,7 @@ export default function Portfolio() {
           .mc-detail-grid { grid-template-columns: 1fr; gap: 16px; }
           .mc-project-detail { margin-left: 0; padding-left: 12px; }
           .bg-canvas { display: none !important; }
+          * { overflow-wrap: break-word; word-break: break-word; }
         }
       `}</style>
 

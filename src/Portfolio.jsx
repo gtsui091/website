@@ -777,6 +777,11 @@ export default function Portfolio() {
                   autoComplete="current-password"
                   value={pwInput}
                   onChange={(e) => { setPwInput(e.target.value); setPwError(false); }}
+                  onFocus={() => {
+                    setTimeout(() => {
+                      pwInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                    }, 300);
+                  }}
                   style={{
                     position: "absolute", opacity: 0,
                     left: 0, top: 0, width: "100%", height: "100%",

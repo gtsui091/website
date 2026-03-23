@@ -659,6 +659,9 @@ export default function Portfolio() {
   const [expanded, setExpanded] = useState(null);
   const [hovered, setHovered] = useState(null);
   const [blink, setBlink] = useState(true);
+  const [nameDone, setNameDone] = useState(false);
+  const [subtitleDone, setSubtitleDone] = useState(false);
+  const [stackDone, setStackDone] = useState(false);
 
   // Password gate
   const [unlocked, setUnlocked] = useState(() => sessionStorage.getItem("pw_ok") === "1");
@@ -881,6 +884,14 @@ export default function Portfolio() {
           from { max-height: 0; opacity: 0; }
           to { max-height: 800px; opacity: 1; }
         }
+        @keyframes headerIn {
+          from { opacity: 0; transform: translateY(-5px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes entryIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
         .sr-skip {
           position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden;
         }
@@ -922,8 +933,8 @@ export default function Portfolio() {
 
         {/* Terminal header */}
         <div style={{ paddingTop: "72px", paddingBottom: "52px" }}>
-          {/* Prompt */}
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "24px" }}>
+          {/* Prompt — fades in immediately as terminal chrome */}
+          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "24px", animation: "headerIn 0.35s ease both" }}>
             <span style={{ fontSize: "10px", color: "rgba(240,237,230,0.18)" }}>gordon@tsui</span>
             <span style={{ fontSize: "10px", color: "rgba(240,237,230,0.08)" }}>:</span>
             <span style={{ fontSize: "10px", color: hovEntry ? hovEntry.accent : "rgba(240,237,230,0.32)", transition: "color 0.4s ease" }}>~/experience</span>
@@ -931,36 +942,57 @@ export default function Portfolio() {
             <span style={{ fontSize: "10px", color: "rgba(240,237,230,0.45)" }}>ls</span>
           </div>
 
-          {/* Large name — Cormorant as deliberate contrast */}
-          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(56px, 8.5vw, 104px)", fontStyle: "italic", fontWeight: 300, color: hovEntry ? hovEntry.accent : "rgba(240,237,230,0.88)", lineHeight: 0.95, letterSpacing: "-0.03em", transition: "color 0.55s ease" }}>
-            Gordon Tsui
+          {/* Large name — types in first, highest priority */}
+          <h1 style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: "clamp(56px, 8.5vw, 104px)", fontStyle: "italic", fontWeight: 300, color: hovEntry ? hovEntry.accent : "rgba(240,237,230,0.88)", lineHeight: 0.95, letterSpacing: "-0.03em", transition: "color 0.55s ease", minHeight: "1em" }}>
+            <TypewriterLine text="Gordon Tsui" speed={22} delay={80} onDone={() => setNameDone(true)} />
           </h1>
           <div style={{ marginTop: "14px", display: "flex", flexDirection: "column", gap: "10px" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-              <span style={{ fontSize: "11px", color: "rgba(240,237,230,0.35)", letterSpacing: "0.2em", textTransform: "uppercase" }}>Web Team Lead · Full-Stack Engineer · Vancouver, BC</span>
-              <span aria-hidden="true" style={{ opacity: blink ? 1 : 0, color: "rgba(240,237,230,0.4)", fontSize: "12px", transition: "opacity 0.05s", lineHeight: 1 }}>▮</span>
+            {/* Subtitle — starts once name finishes */}
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", minHeight: "1.4em" }}>
+              <span style={{ fontSize: "11px", color: "rgba(240,237,230,0.35)", letterSpacing: "0.2em", textTransform: "uppercase" }}>
+                {nameDone && (
+                  <TypewriterLine text="Web Team Lead · Full-Stack Engineer · Vancouver, BC" speed={11} delay={0} onDone={() => setSubtitleDone(true)} />
+                )}
+              </span>
+              {/* Cursor stays visible between subtitle and stack typing */}
+              {nameDone && !stackDone && (
+                <span aria-hidden="true" style={{ opacity: blink ? 1 : 0, color: "rgba(240,237,230,0.4)", fontSize: "12px", transition: "opacity 0.05s", lineHeight: 1 }}>▮</span>
+              )}
             </div>
-            <div style={{ fontSize: "11px", color: "rgba(240,237,230,0.28)", letterSpacing: "0.18em", textTransform: "uppercase" }}>Node.js · React · PostgreSQL · AWS · Jenkins · Shopify</div>
-            <div style={{ fontSize: "10px", color: "rgba(240,237,230,0.30)", letterSpacing: "0.04em" }}>// Full-stack engineer and team lead. Retention-focused product development, cloud infrastructure, and shipping velocity.</div>
+            {/* Tech stack — starts once subtitle finishes */}
+            <div style={{ fontSize: "11px", color: "rgba(240,237,230,0.28)", letterSpacing: "0.18em", textTransform: "uppercase", minHeight: "1.4em" }}>
+              {subtitleDone && (
+                <TypewriterLine text="Node.js · React · PostgreSQL · AWS · Jenkins · Shopify" speed={8} delay={0} onDone={() => setStackDone(true)} />
+              )}
+            </div>
+            {/* Comment — fades in once stack finishes */}
+            <div style={{ fontSize: "10px", color: "rgba(240,237,230,0.30)", letterSpacing: "0.04em", opacity: stackDone ? 1 : 0, transform: stackDone ? "none" : "translateY(5px)", transition: "opacity 0.45s ease, transform 0.45s ease" }}>// Full-stack engineer and team lead. Retention-focused product development, cloud infrastructure, and shipping velocity.</div>
           </div>
         </div>
 
-        {/* Command line before list */}
-        <div style={{ fontSize: "9px", color: "rgba(240,237,230,0.1)", letterSpacing: "0.1em", marginBottom: "6px" }}>$ cat experience/*</div>
+        {/* Command line before list — fades in after header sequence */}
+        <div style={{ fontSize: "9px", color: "rgba(240,237,230,0.1)", letterSpacing: "0.1em", marginBottom: "6px", opacity: stackDone ? 1 : 0, transition: "opacity 0.3s ease 0.1s" }}>$ cat experience/*</div>
 
-        {/* Entries */}
+        {/* Entries — stagger in after name is typed */}
         <div>
-          {experiences.map((p) => (
-            <TerminalEntry
+          {experiences.map((p, i) => (
+            <div
               key={p.id}
-              p={p}
-              isOpen={expanded === p.id}
-              onToggle={() => setExpanded(expanded === p.id ? null : p.id)}
-              isHovered={hovered === p.id}
-              onHoverEnter={() => setHovered(p.id)}
-              onHoverLeave={() => setHovered(null)}
-              blink={blink}
-            />
+              style={{
+                opacity: 0,
+                animation: nameDone ? `entryIn 0.55s cubic-bezier(0.16,1,0.3,1) ${i * 65}ms both` : "none",
+              }}
+            >
+              <TerminalEntry
+                p={p}
+                isOpen={expanded === p.id}
+                onToggle={() => setExpanded(expanded === p.id ? null : p.id)}
+                isHovered={hovered === p.id}
+                onHoverEnter={() => setHovered(p.id)}
+                onHoverLeave={() => setHovered(null)}
+                blink={blink}
+              />
+            </div>
           ))}
         </div>
 

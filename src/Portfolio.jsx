@@ -715,7 +715,7 @@ export default function Portfolio() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { margin: 0; }
+        html, body { margin: 0; background-color: #060808; }
         @keyframes shake {
           0%,100% { transform: translateX(0); }
           20%,60% { transform: translateX(-8px); }
@@ -803,7 +803,7 @@ export default function Portfolio() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400&family=Cormorant+Garamond:ital,wght@0,300;1,300;1,600&display=swap');
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        body { margin: 0; }
+        html, body { margin: 0; background-color: #060808; }
         .mc-entry {
           border-top: 1px solid rgba(240,237,230,0.05);
           cursor: pointer;

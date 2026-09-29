@@ -12,7 +12,7 @@ const experiences = [
   {
     id: 1, num: "01", title: "FORM",
     tags: ["Web Team Lead", "Full Stack"], year: "2021–Present",
-    desc: "Led the web team through a retention turnaround — churn dropped from 13% to 6% in a single year. Shipped Streaks from hackathon to A/B production, built the Web-Driven UI framework, and migrated infrastructure off AWS OpsWorks with zero downtime.",
+    desc: "Led the web team through a retention turnaround — churn dropped from 13% to 6% in a single year. Shipped Streaks from hackathon to A/B production, built the Web-Driven UI framework, integrated third-party platforms like Whoop to drive dynamic workouts from recovery scores, and migrated infrastructure off AWS OpsWorks with zero downtime.",
     accent: "#E6FF00", bg: "#0a1a00", visual: "terrain",
     siteUrl: "https://www.formswim.com",
     workNote: "Churn cut in half. Streaks shipped in 4 weeks. Zero downtime on the migration.",
@@ -24,6 +24,7 @@ const experiences = [
     subitems: [
       { label: "Streaks", detail: "Hackathon concept → A/B production in weeks. A direct driver of the churn improvement." },
       { label: "Web-Driven UI", detail: "Eliminated mobile release cycle dependency. Enabled rapid iteration and A/B testing." },
+      { label: "Whoop Integration", detail: "Third-party recovery data → dynamic HeadCoach workouts scaled to the user's Whoop recovery score." },
       { label: "Infrastructure", detail: "Zero-downtime AWS OpsWorks migration + Intel-to-Arm server transition." },
       { label: "Subscriptions", detail: "Prepaid, Try Before You Buy, variable trials — architected for long-term flexibility." },
     ],

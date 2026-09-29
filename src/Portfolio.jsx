@@ -302,13 +302,19 @@ function ScrambleTitle({ text, active, className, style }) {
 
 // Types `text` character by character. Shows a solid ▮ cursor while in progress.
 // Calls onDone() once the last character has been printed.
-function TypewriterLine({ text, speed = 16, delay = 0, onDone }) {
-  const [chars, setChars] = useState(0);
+// When instant=true, renders full text immediately (revisit / skim path).
+function TypewriterLine({ text, speed = 16, delay = 0, onDone, instant = false }) {
+  const [chars, setChars] = useState(instant ? text.length : 0);
   const refs = useRef({ to: null, iv: null, notified: false });
 
   useEffect(() => {
     const r = refs.current;
     r.notified = false;
+    if (instant) {
+      setChars(text.length);
+      if (!r.notified) { r.notified = true; onDone?.(); }
+      return;
+    }
     setChars(0);
     r.to = setTimeout(() => {
       let c = 0;
@@ -322,7 +328,7 @@ function TypewriterLine({ text, speed = 16, delay = 0, onDone }) {
       }, speed);
     }, delay);
     return () => { clearTimeout(r.to); clearInterval(r.iv); };
-  }, [text, speed, delay]);
+  }, [text, speed, delay, instant]);
 
   const done = chars >= text.length;
   return <>{text.slice(0, chars)}{!done && <span style={{ opacity: 0.55 }}>▮</span>}</>;
@@ -331,9 +337,13 @@ function TypewriterLine({ text, speed = 16, delay = 0, onDone }) {
 // Label types left→right; the moment it finishes, detail text starts typing
 // left→right in the next column — one continuous motion per row.
 // onDone is called when the DETAIL finishes (full row complete).
-function TerminalSubItem({ sub, color, staggerDelay, labelSpeed, detailSpeed, onDone }) {
-  const [labelDone, setLabelDone] = useState(false);
+function TerminalSubItem({ sub, color, staggerDelay, labelSpeed, detailSpeed, onDone, instant = false }) {
+  const [labelDone, setLabelDone] = useState(instant);
   const rgb = hexRgb(color);
+
+  useEffect(() => {
+    if (instant) setLabelDone(true);
+  }, [instant]);
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "100px 1fr", gap: "14px", alignItems: "baseline" }}>
@@ -341,11 +351,11 @@ function TerminalSubItem({ sub, color, staggerDelay, labelSpeed, detailSpeed, on
         fontSize: "8px", letterSpacing: "0.12em", textTransform: "uppercase",
         color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.6)`, textAlign: "left",
       }}>
-        <TypewriterLine text={sub.label} speed={labelSpeed} delay={staggerDelay} onDone={() => setLabelDone(true)} />
+        <TypewriterLine text={sub.label} speed={labelSpeed} delay={instant ? 0 : staggerDelay} instant={instant} onDone={() => setLabelDone(true)} />
       </span>
       <span style={{ fontSize: "10px", color: "rgba(240,237,230,0.33)", lineHeight: 1.7 }}>
         {/* Only mount once the label column is done — cursor moves left→right into this column */}
-        {labelDone && <TypewriterLine text={`→ ${sub.detail}`} speed={detailSpeed} delay={0} onDone={onDone} />}
+        {labelDone && <TypewriterLine text={`→ ${sub.detail}`} speed={detailSpeed} delay={0} instant={instant} onDone={onDone} />}
       </span>
     </div>
   );
@@ -493,16 +503,19 @@ function ProjectDetail({ project, accent, blink }) {
   );
 }
 
-function TerminalEntry({ p, isOpen, onToggle, isHovered, onHoverEnter, onHoverLeave, blink }) {
+function TerminalEntry({ p, isOpen, skipAnim, onToggle, isHovered, onHoverEnter, onHoverLeave, blink }) {
   const [allDone, setAllDone] = useState(false);
   const [openProject, setOpenProject] = useState(null);
   const [cdTypingDone, setCdTypingDone] = useState(false);
   const doneCount = useRef(0);
   const trailingTimer = useRef(null);
   const rgb = hexRgb(p.accent);
-  const STAGGER = 220;     // ms between row label starts
-  const LABEL_SPEED = 16;  // ms per char — labels are short so this feels fast
-  const DETAIL_SPEED = 5;  // ms per char — details are longer, keep it snappy
+  // First visit: snappy. Revisit: instant (skipAnim).
+  const STAGGER = skipAnim ? 0 : 70;
+  const LABEL_SPEED = skipAnim ? 0 : 10;
+  const DETAIL_SPEED = skipAnim ? 0 : 3;
+  const ROW_START = skipAnim ? 0 : 60;
+  const PROJECTS_DELAY = skipAnim ? 0 : 40;
 
   useEffect(() => {
     if (!isOpen) {
@@ -511,13 +524,17 @@ function TerminalEntry({ p, isOpen, onToggle, isHovered, onHoverEnter, onHoverLe
       doneCount.current = 0;
       setOpenProject(null);
       setCdTypingDone(false);
+      return;
     }
-  }, [isOpen]);
+    if (skipAnim) {
+      setAllDone(true);
+    }
+  }, [isOpen, skipAnim]);
 
   const handleRowDone = () => {
     doneCount.current++;
     if (doneCount.current >= p.subitems.length) {
-      trailingTimer.current = setTimeout(() => setAllDone(true), 120);
+      trailingTimer.current = setTimeout(() => setAllDone(true), PROJECTS_DELAY);
     }
   };
 
@@ -567,9 +584,48 @@ function TerminalEntry({ p, isOpen, onToggle, isHovered, onHoverEnter, onHoverLe
             {p.desc}
           </div>
 
+          {/* Story headline + stats — visible immediately for skim (no typewriter gate) */}
+          {p.story && (
+            <div className="mc-story" style={{ animation: "mcIn 0.3s cubic-bezier(0.16,1,0.3,1) 0.04s both" }}>
+              {p.story.headline && (
+                <div style={{
+                  fontFamily: "'Cormorant Garamond', serif",
+                  fontStyle: "italic",
+                  fontSize: "clamp(18px, 2.4vw, 26px)",
+                  fontWeight: 300,
+                  color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.72)`,
+                  lineHeight: 1.25,
+                  letterSpacing: "-0.01em",
+                  maxWidth: "640px",
+                  marginBottom: p.story.stats?.length ? "14px" : 0,
+                }}>
+                  {p.story.headline}
+                </div>
+              )}
+              {p.story.stats?.length > 0 && (
+                <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                  {p.story.stats.map((s) => (
+                    <div key={s.label} className="mc-metric" style={{ border: `1px solid rgba(${rgb.r},${rgb.g},${rgb.b},0.18)` }}>
+                      <div style={{
+                        fontFamily: "'Cormorant Garamond', serif", fontSize: "22px",
+                        fontWeight: 600, fontStyle: "italic",
+                        color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.78)`,
+                        lineHeight: 1, letterSpacing: "-0.02em",
+                      }}>{s.value}</div>
+                      <div style={{
+                        fontSize: "8px", letterSpacing: "0.14em", textTransform: "uppercase",
+                        color: "rgba(240,237,230,0.28)", marginTop: "6px",
+                      }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Divider types out — gives the "terminal printing" feeling before subitems */}
           <div style={{ fontSize: "9px", color: "rgba(240,237,230,0.08)", animation: "mcIn 0.2s ease 0.06s both" }}>
-            <TypewriterLine text="──────────────────────────────" speed={8} delay={80} />
+            <TypewriterLine text="──────────────────────────────" speed={6} delay={skipAnim ? 0 : 40} instant={skipAnim} />
           </div>
 
           {/* Each row: label types left→right, then detail continues left→right */}
@@ -578,16 +634,17 @@ function TerminalEntry({ p, isOpen, onToggle, isHovered, onHoverEnter, onHoverLe
               key={sub.label}
               sub={sub}
               color={p.accent}
-              staggerDelay={i * STAGGER + 180}
+              staggerDelay={i * STAGGER + ROW_START}
               labelSpeed={LABEL_SPEED}
               detailSpeed={DETAIL_SPEED}
+              instant={skipAnim}
               onDone={handleRowDone}
             />
           ))}
 
           {/* ── Project drill-down (only for entries with projects) ── */}
           {p.projects?.length > 0 && allDone && (
-            <div className="mc-project-list" style={{ animation: "mcIn 0.3s cubic-bezier(0.16,1,0.3,1) both" }}>
+            <div className="mc-project-list" style={{ animation: skipAnim ? "none" : "mcIn 0.3s cubic-bezier(0.16,1,0.3,1) both" }}>
               <div style={{
                 fontSize: "9px", letterSpacing: "0.1em",
                 color: `rgba(${rgb.r},${rgb.g},${rgb.b},0.38)`,
@@ -606,7 +663,7 @@ function TerminalEntry({ p, isOpen, onToggle, isHovered, onHoverEnter, onHoverLe
                         setCdTypingDone(false);
                       } else {
                         setOpenProject(proj.id);
-                        setCdTypingDone(false);
+                        setCdTypingDone(skipAnim);
                       }
                     }}
                     blink={blink}
@@ -621,8 +678,9 @@ function TerminalEntry({ p, isOpen, onToggle, isHovered, onHoverEnter, onHoverLe
                       {!cdTypingDone ? (
                         <TypewriterLine
                           text={`$ cd ${p.title.toLowerCase()}/${proj.id}`}
-                          speed={28}
-                          delay={80}
+                          speed={skipAnim ? 0 : 16}
+                          delay={skipAnim ? 0 : 40}
+                          instant={skipAnim}
                           onDone={() => setCdTypingDone(true)}
                         />
                       ) : (
@@ -659,6 +717,7 @@ function TerminalEntry({ p, isOpen, onToggle, isHovered, onHoverEnter, onHoverLe
 
 export default function Portfolio() {
   const [expanded, setExpanded] = useState(null);
+  const [visited, setVisited] = useState(() => new Set());
   const [hovered, setHovered] = useState(null);
   const [blink, setBlink] = useState(true);
   const [nameDone, setNameDone] = useState(false);
@@ -672,6 +731,19 @@ export default function Portfolio() {
   const [pwShake, setPwShake] = useState(false);
   const [termPhase, setTermPhase] = useState(0);
   const pwInputRef = useRef(null);
+
+  function toggleEntry(id) {
+    if (expanded === id) {
+      setVisited((prev) => {
+        const next = new Set(prev);
+        next.add(id);
+        return next;
+      });
+      setExpanded(null);
+    } else {
+      setExpanded(id);
+    }
+  }
 
   async function handleUnlock(e) {
     e.preventDefault();
@@ -882,6 +954,10 @@ export default function Portfolio() {
         .mc-metric {
           padding: 12px 16px;
         }
+        .mc-story {
+          margin-top: 2px;
+          margin-bottom: 2px;
+        }
         @keyframes mcDetailOpen {
           from { max-height: 0; opacity: 0; }
           to { max-height: 800px; opacity: 1; }
@@ -974,6 +1050,29 @@ export default function Portfolio() {
           </div>
         </div>
 
+        {/* About — senior-role fit filter, skim-first */}
+        <section
+          aria-label="About"
+          style={{
+            paddingBottom: "40px",
+            opacity: stackDone ? 1 : 0,
+            transform: stackDone ? "none" : "translateY(6px)",
+            transition: "opacity 0.45s ease 0.12s, transform 0.45s ease 0.12s",
+            pointerEvents: stackDone ? "auto" : "none",
+          }}
+        >
+          <div style={{ fontSize: "9px", color: "rgba(240,237,230,0.1)", letterSpacing: "0.1em", marginBottom: "12px" }}>$ cat about.txt</div>
+          <p style={{
+            fontSize: "12px",
+            color: "rgba(240,237,230,0.42)",
+            lineHeight: 1.85,
+            maxWidth: "620px",
+            letterSpacing: "0.01em",
+          }}>
+            Full-stack engineer and web team lead with a decade shipping product and infrastructure. Most recently at FORM I owned retention and subscription systems end-to-end — experimentation platforms, multi-store billing, and the features that cut churn in half. Open to senior engineering roles where ownership of product outcomes and technical direction are part of the job.
+          </p>
+        </section>
+
         {/* Command line before list — fades in after header sequence */}
         <div style={{ fontSize: "9px", color: "rgba(240,237,230,0.1)", letterSpacing: "0.1em", marginBottom: "6px", opacity: stackDone ? 1 : 0, transition: "opacity 0.3s ease 0.1s" }}>$ cat experience/*</div>
 
@@ -990,7 +1089,8 @@ export default function Portfolio() {
               <TerminalEntry
                 p={p}
                 isOpen={expanded === p.id}
-                onToggle={() => setExpanded(expanded === p.id ? null : p.id)}
+                skipAnim={visited.has(p.id)}
+                onToggle={() => toggleEntry(p.id)}
                 isHovered={hovered === p.id}
                 onHoverEnter={() => setHovered(p.id)}
                 onHoverLeave={() => setHovered(null)}
